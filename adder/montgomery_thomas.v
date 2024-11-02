@@ -19,12 +19,12 @@ module montgomery(
                                                                 //Definition A and to be multiplexed registers
   // Definition register A
     reg          regA_en;
-    wire [1026:0] regA_D;// in
-    reg  [1026:0] regA_Q;// out
+    wire [1023:0] regA_D;// in
+    reg  [1023:0] regA_Q;// out
     
     always @(posedge clk)
     begin
-        if(~resetn)         regA_Q = 1027'd0;
+        if(~resetn)         regA_Q = 1024'd0;
         else if (regA_en)   regA_Q <= regA_D; //If not reset, paste input for a to register a
     end
     
@@ -92,11 +92,11 @@ module montgomery(
     
                 // Definition register C
     reg          regC_en;   
-    wire [1026:0] regC_D;   // in
-    reg  [1026:0] regC_Q;   // out
+    wire [1027:0] regC_D;   // in
+    reg  [1027:0] regC_Q;   // out
     always @(posedge clk)
     begin
-        if(~resetn || start)         regC_Q = 1027'd0;
+        if(~resetn || start)         regC_Q = 1028'd0;
         else if (regC_en)   regC_Q <= regC_D;
     end
                 
@@ -111,13 +111,13 @@ module montgomery(
     end
           
     //shifting preparation stage
-    wire [1023:0] operand_outM;
-    wire [1024:0] operand_out2M;
-    wire [1025:0] operand_out3M;
+    wire [1026:0] operand_outM;
+    wire [1026:0] operand_out2M;
+    wire [1026:0] operand_out3M;
     
-    wire [1023:0] operand_outB;
-    wire [1024:0] operand_out2B;
-    wire [1025:0] operand_out3B;
+    wire [1026:0] operand_outB;
+    wire [1026:0] operand_out2B;
+    wire [1026:0] operand_out3B;
     
     wire prep_done_M;
     wire prep_done_B;
@@ -146,43 +146,32 @@ module montgomery(
         end
     end
   
-  //adder initialization      
-  reg subtract;
-  wire adder_done;
-  reg start_adder;
- // mpadder adder(clk, resetn, start_adder, subtract, operand_A, operand_B, regoutadder_D, adder_done); //initializes wires adder
- 
-     mpadder adder (
-        .clk(clk),
-        .resetn(resetn),
-        .start(start_adder),
-        .subtract(subtract),
-        .in_a(operand_A),
-        .in_b(operand_B),
-        .result(regoutadder_D),
-        .done(adder_done)
-    );
+    //adder initialization      
+    reg subtract;
+    wire adder_done;
+    reg start_adder;
+    mpadder adder(clk, resetn, start_adder, subtract, operand_A, operand_B, regoutadder_D, adder_done); //initializes wires adder
 
-  //Shifter initialization 
-  reg   shift;
-  reg  [1026:0] out_shift;
-  always @(posedge clk) begin
+    //Shifter initialization 
+    reg   shift;
+    reg  [1026:0] out_shift;
+    always @(posedge clk) begin
         if(~resetn) begin
-            out_shift <= 10'b0;
+            out_shift <= 1027'b0;
         end
     end
-      wire   shift_done;
-      reg   enable_shifter;
+    wire   shift_done;
+    reg   enable_shifter;
   
 
-  shift_register shifter(clk, in_shift, shift, shift_direction, resetn, enable_shifter, output_shift, shift_done);
+    shift_register shifter(clk, in_shift, shift, shift_direction, resetn, enable_shifter, output_shift, shift_done);
 
     //this counter thing works, wow
-    reg [9:0] i; // Counter for d512 for loop
+    reg [9:0] i; // Counter for 1024 for loop
     reg incrementi;
     always @(posedge clk) begin
         if (~resetn) begin
-            i <= 9'b0; // Reset the counter when resetn is low
+            i <= 10'd0; // Reset the counter when resetn is low
         end if(incrementi == 1'b1) begin
             i <= i + 2; // Increment the counter on clock edge
         end
@@ -241,18 +230,19 @@ module montgomery(
                 operand_A <= regC_Q; 
             end 
         end
+
         start_adder <= start_secondadd; //wait a cycle for regC_Q and RegB to load into adder before addition
             
         regC_Q <= out_shift;
     end
-        assign in_shift = regoutadder_Q;
+    assign in_shift = regoutadder_Q;
 
-        
-        reg start_modulo;
-        reg  [1023:0] regComp;   // out 
-        reg done_comp;
-        
-        //Finite state machine should set substract to enabled here
+    
+    reg start_modulo;
+    reg  [1023:0] regComp;   // out 
+    reg done_comp;
+    
+    //Finite state machine should set substract to enabled here
     always @(posedge clk) begin
         if(start_modulo) begin
             operand_A <= regC_Q;
@@ -268,189 +258,188 @@ module montgomery(
 
     assign result = (done_comp) ? regC_Q : 1024'b0;
 
-        //State Machine shifting
-        reg [2:0] state, nextstate;   
-            always @(posedge clk)
-        begin
-            if(~resetn)	state <= 3'd0;
-            else        state <= nextstate;
-        end
-        reg regDone;
+    //State Machine shifting
+    reg [2:0] state, nextstate;   
+        always @(posedge clk)
+    begin
+        if(~resetn)	state <= 3'd0;
+        else        state <= nextstate;
+    end
+    reg regDone;
+    
+    always @(*) begin //state descriptions
+        case(state)
         
-        always @(*) begin //state descriptions
-            case(state)
+        // waiting stage
+            3'd0: begin
+                regA_en        <= 1'b1;
+                regB_en        <= 1'b1;
+                reg2B_en       <= 1'b1; 
+                reg3B_en       <= 1'b1;
+                regM_en        <= 1'b1;
+                reg2M_en       <= 1'b1;
+                reg3M_en       <= 1'b1;
+                regC_en        <= 1'b1;
+                
+                subtract       <= 1'b0;
+                i              <= 9'b0;
+                start_secondadd<= 1'b0;
+                start_firstadd <= 1'b0;
+                start_adder    <= 1'b0;
+                shift          <= 1'b0;
+                done_comp      <= 1'b0;
+                //adder_done     <= 1'b0;
+                //shift_done     <= 1'b0;
+                enable_shifter <= 1'b1;
+                regDone        <= 1'b0;
+                shift_direction   <= 1'b1;
+            end
             
-            // waiting stage
-                3'd0: begin
-                    regA_en        <= 1'b1;
-                    regB_en        <= 1'b1;
-                    reg2B_en       <= 1'b1; 
-                    reg3B_en       <= 1'b1;
-                    regM_en        <= 1'b1;
-                    reg2M_en       <= 1'b1;
-                    reg3M_en       <= 1'b1;
-                    regC_en        <= 1'b1;
-                    
-                    subtract       <= 1'b0;
-                    i              <= 9'b0;
-                    start_secondadd<= 1'b0;
-                    start_firstadd <= 1'b0;
-                    start_adder    <= 1'b0;
-                    shift          <= 1'b0;
-                    done_comp      <= 1'b0;
-                    //adder_done     <= 1'b0;
-                    //shift_done     <= 1'b0;
-                    enable_shifter <= 1'b1;
-                    regDone        <= 1'b0;
-                    shift_direction   <= 1'b1;
-                end
-                
-                // preparation stage;
-                3'd1: begin
-                    subtract       <= 1'b0;
-                    i              <= 9'b0;
-                    incrementi     <= 1'b0;
-                    start_adder    <= 1'b0;
-                    //shift          <= 1'b1;
-                    done_comp      <= 1'b0;
-                    //adder_done     <= 1'b0;
-                    //shift_done     <= 1'b0;
-                    enable_shifter <= 1'b1;
-                    shift_direction   <= 1'b1;
-                end
-                
-                // First addition stage
-                3'd2: begin
-                    start_firstadd <= 1'b1;
-                    start_secondadd<= 1'b0;
-                    subtract       <= 1'b0;
-                    start_adder    <= 1'b1; //start the adder for 
-                    //shift          <= 1'b0;
-                    done_comp      <= 1'b0;
-                    enable_shifter <= 1'b0;
-                end
-                
-                //second addition plus shift stage
-                3'd3: begin
-                    start_firstadd <= 1'b0;
-                    start_secondadd<= 1'b1;
-                    subtract       <= 1'b0;
-                    incrementi     <= 1'b0;
-                    start_firstadd <= 1'b0;
-                    start_adder    <= 1'b0;
-                    //shift          <= 1'b0;
-                    done_comp      <= 1'b0;
-                    //shift_done     <= 1'b0;
-                    enable_shifter <= 1'b0;
-                    shift_direction    <= 1'b0;
-                end
-                
-                //subtracting stage
-                3'd4: begin
-                    start_modulo   <= 1'b1;
-                    subtract       <= 1'b1;
-                    i              <= 9'b0;
-                    incrementi     <= 1'b0;
-                    start_adder    <= 1'b1;
-                    //shift          <= 1'b0;
-                    done_comp      <= 1'b0;
-                    //shift_done     <= 1'b0;
-                    enable_shifter <= 1'b0;
-                end
-                //end stage
-                3'd5: begin
-                    subtract       <= 1'b0;
-                    i              <= 9'b0;
-                    incrementi     <= 1'b0;
-                    start_adder    <= 1'b0;
-                    //shift          <= 1'b0;
-                    done_comp      <= 1'b0;
-                    //shift_done     <= 1'b0;
-                    enable_shifter <= 1'b0;
-                    regDone        <= 1'b1;
-                end
-                
-                default: begin
-                    regA_en        <= 1'b1;
-                    regB_en        <= 1'b1;
-                    reg2B_en       <= 1'b1; 
-                    reg3B_en       <= 1'b1;
-                    regM_en        <= 1'b1;
-                    reg2M_en       <= 1'b1;
-                    reg3M_en       <= 1'b1;
-                    regC_en        <= 1'b0;
-                    start_secondadd<= 1'b0;
-                    start_firstadd <= 1'b0;
-                    i              <= 9'b0;
-                    incrementi     <= 1'b0;
-                    start_adder    <= 1'b0;
-                    shift          <= 1'b0;
-                    done_comp      <= 1'b0;
-                    //shift_done     <= 1'b0;
-                    enable_shifter <= 1'b0;
-                    regDone        <= 1'b0;
-                    shift_direction   <= 1'b0;
-                end
-            endcase
-        end    
+            // preparation stage;
+            3'd1: begin
+                subtract       <= 1'b0;
+                i              <= 9'b0;
+                incrementi     <= 1'b0;
+                start_adder    <= 1'b0;
+                //shift          <= 1'b1;
+                done_comp      <= 1'b0;
+                //adder_done     <= 1'b0;
+                //shift_done     <= 1'b0;
+                enable_shifter <= 1'b1;
+                shift_direction   <= 1'b1;
+            end
+            
+            // First addition stage
+            3'd2: begin
+                start_firstadd <= 1'b1;
+                start_secondadd<= 1'b0;
+                subtract       <= 1'b0;
+                start_adder    <= 1'b1; //start the adder for 
+                //shift          <= 1'b0;
+                done_comp      <= 1'b0;
+                enable_shifter <= 1'b0;
+            end
+            
+            //second addition plus shift stage
+            3'd3: begin
+                start_firstadd <= 1'b0;
+                start_secondadd<= 1'b1;
+                subtract       <= 1'b0;
+                incrementi     <= 1'b0;
+                start_firstadd <= 1'b0;
+                start_adder    <= 1'b0;
+                //shift          <= 1'b0;
+                done_comp      <= 1'b0;
+                //shift_done     <= 1'b0;
+                enable_shifter <= 1'b0;
+                shift_direction    <= 1'b0;
+            end
+            
+            //subtracting stage
+            3'd4: begin
+                start_modulo   <= 1'b1;
+                subtract       <= 1'b1;
+                i              <= 9'b0;
+                incrementi     <= 1'b0;
+                start_adder    <= 1'b1;
+                //shift          <= 1'b0;
+                done_comp      <= 1'b0;
+                //shift_done     <= 1'b0;
+                enable_shifter <= 1'b0;
+            end
+            //end stage
+            3'd5: begin
+                subtract       <= 1'b0;
+                i              <= 9'b0;
+                incrementi     <= 1'b0;
+                start_adder    <= 1'b0;
+                //shift          <= 1'b0;
+                done_comp      <= 1'b0;
+                //shift_done     <= 1'b0;
+                enable_shifter <= 1'b0;
+                regDone        <= 1'b1;
+            end
+            
+            default: begin
+                regA_en        <= 1'b1;
+                regB_en        <= 1'b1;
+                reg2B_en       <= 1'b1; 
+                reg3B_en       <= 1'b1;
+                regM_en        <= 1'b1;
+                reg2M_en       <= 1'b1;
+                reg3M_en       <= 1'b1;
+                regC_en        <= 1'b0;
+                start_secondadd<= 1'b0;
+                start_firstadd <= 1'b0;
+                i              <= 9'b0;
+                incrementi     <= 1'b0;
+                start_adder    <= 1'b0;
+                shift          <= 1'b0;
+                done_comp      <= 1'b0;
+                //shift_done     <= 1'b0;
+                enable_shifter <= 1'b0;
+                regDone        <= 1'b0;
+                shift_direction   <= 1'b0;
+            end
+        endcase
+    end    
         
     //finite state machine
         
         
-        always @(posedge clk) begin
-            case(state)
-                // waiting stage
-                3'd0: begin
-                    if(start) begin
-                        nextstate <= 3'd1;
-                        end
-                end
-                
-                //Preparation stage
-                3'd1: begin
-                    if(prep_done_M && prep_done_B) begin
-                        nextstate <= 3'd2;
+    always @(posedge clk) begin
+        case(state)
+            // waiting stage
+            3'd0: begin
+                if(start) begin
+                    nextstate <= 3'd1;
                     end
+            end
+            
+            //Preparation stage
+            3'd1: begin
+                if(prep_done_M && prep_done_B) begin
+                    nextstate <= 3'd2;
                 end
-                
-                //For loop stage(multiplexing, 1st addition
-                3'd2: begin
-                    if(adder_done == 1'b1) begin
-                        nextstate <= 3'd3;
-                        incrementi<= 1'b1; //one clock cycle incrementi is high(between switch from st2 to st3
-                    end else begin
-                        incrementi<= 1'b0;
-                    end
+            end
+            
+            //For loop stage(multiplexing, 1st addition
+            3'd2: begin
+                if(adder_done == 1'b1) begin
+                    nextstate <= 3'd3;
+                    incrementi<= 1'b1; //one clock cycle incrementi is high(between switch from st2 to st3
+                end else begin
+                    incrementi<= 1'b0;
                 end
-                
-                //2nd addition, shift)
-                3'd3: begin
-                    if(i == 10'd512) begin
-                        nextstate <= 3'd4;
-                    end if(shift_done == 1'b1) begin
-                        nextstate <= 3'd2;
-                    end
+            end
+            
+            //2nd addition, shift)
+            3'd3: begin
+                if(i == 10'd512) begin
+                    nextstate <= 3'd4;
+                end if(shift_done == 1'b1) begin
+                    nextstate <= 3'd2;
                 end
-                
-                //While loop stage
-                3'd4: begin
-                    if(done_comp) begin
-                        nextstate <= 3'd5;
-                    end
+            end
+            
+            //While loop stage
+            3'd4: begin
+                if(done_comp) begin
+                    nextstate <= 3'd5;
                 end
-                
-                //RegC_Q contains answer
-                3'd5: begin
-                nextstate <= 3'd0;
-                end
-                
-                default: begin
-                nextstate <= 3'd0;
-                incrementi<= 1'b0;
-                end
-                endcase
+            end
+            
+            //RegC_Q contains answer
+            3'd5: begin
+            nextstate <= 3'd0;
+            end
+            
+            default: begin
+            nextstate <= 3'd0;
+            incrementi<= 1'b0;
+            end
+        endcase
     end
     
     assign done = regDone;
-    endmodule
-
+endmodule
