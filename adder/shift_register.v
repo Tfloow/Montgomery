@@ -33,6 +33,9 @@ module shift_register(
             delayRegDone <= 1'b1;
         end
 
+        if(delayRegDone)
+            delayRegDone <= 1'b0;
+
         // delay done
         regDone <= delayRegDone;
     end

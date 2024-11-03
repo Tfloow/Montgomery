@@ -165,7 +165,7 @@ module mpadder(
             2'd2: begin
                 regA_en        <= 1'b0;
                 regB_en        <= 1'b0;
-                regResult_en   <= 1'b1;
+                regResult_en   <= 1'b0;
                 regCout_en     <= 1'b0;
                 muxCarryIn_sel <= 1'b1;
                 muxA_sel        <= 1'b0;  // Select in_a for shifting
@@ -207,7 +207,7 @@ module mpadder(
 
             2'd1   : begin
             
-                if(count >= 5'd16) begin // will repeat 16 times in the loop state 1 and last one in state 2
+                if(count >= 5'd17) begin // will repeat 16 times in the loop state 1 and last one in state 2
                     nextstate <= 2'd2;
                  end else begin
                     nextstate <= 2'd1;

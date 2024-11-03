@@ -1,23 +1,26 @@
 `timescale 1ns / 1ps
 `include "adder.v"
+`include "shift_add_123.v"
+`include "shift_register_two.v"
+`include "seven_multiplexer.v"
 
 module montgomery(
-  input           clk,
-  input           resetn,
-  input           start,
-  input  [1023:0] in_a,
-  input  [1023:0] in_b,
-  input  [1023:0] in_m,
-  output [1024:0] result,
-  output          done
-    );
+    input           clk,
+    input           resetn,
+    input           start,
+    input  [1023:0] in_a,
+    input  [1023:0] in_b,
+    input  [1023:0] in_m,
+    output [1024:0] result,
+    output   reg       done
+        );
 
-  // Student tasks:
-  // 1. Instantiate an Adder
-  // 2. Use the Adder to implement the Montgomery multiplier in hardware.
-  // 3. Use tb_montgomery.v to simulate your design.
+    // Student tasks:
+    // 1. Instantiate an Adder
+    // 2. Use the Adder to implement the Montgomery multiplier in hardware.
+    // 3. Use tb_montgomery.v to simulate your design.
                                                                 //Definition A and to be multiplexed registers
-  // Definition register A
+    // Definition register A
     reg          regA_en;
     wire [1023:0] regA_D;// in
     reg  [1023:0] regA_Q;// out
@@ -86,7 +89,7 @@ module montgomery(
     reg  [1026:0] reg3M_Q;   // out
     always @(posedge clk)
     begin
-        if(~resetn)         reg3M_Q = 1027'd0;
+        if(~resetn)             reg3M_Q = 1027'd0;
         else if (reg3M_en)   reg3M_Q <= reg3M_D;
     end
     
@@ -111,24 +114,24 @@ module montgomery(
     end
           
     //shifting preparation stage
-    wire [1026:0] operand_outM;
-    wire [1026:0] operand_out2M;
-    wire [1026:0] operand_out3M;
+    wire [1023:0] operand_outM;
+    wire [1024:0] operand_out2M;
+    wire [1027:0] operand_out3M;
     
-    wire [1026:0] operand_outB;
-    wire [1026:0] operand_out2B;
-    wire [1026:0] operand_out3B;
+    wire [1023:0] operand_outB;
+    wire [1024:0] operand_out2B;
+    wire [1027:0] operand_out3B;
     
     wire prep_done_M;
     wire prep_done_B;
       
             //connecting shift_add with the registers
-    assign regM_D = operand_outM;
-    assign reg2M_D = operand_out2M;
+    assign regM_D = {3'b0, operand_outM};
+    assign reg2M_D = {2'b0, operand_out2M};
     assign reg3M_D = operand_out3M;
     
-    assign regB_D = operand_outB;
-    assign reg2B_D = operand_out2B;
+    assign regB_D = {3'b0, operand_outB};
+    assign reg2B_D = {2'b0, operand_out2B};
     assign reg3B_D = operand_out3B;
     
     reg shift_direction;
@@ -136,15 +139,15 @@ module montgomery(
     shift_add_123   shiftM(clk, in_m, start, resetn, prep_done_M, operand_outM, operand_out2M, operand_out3M); //initializes wires adder
     shift_add_123   shiftB(clk, in_b, start, resetn, prep_done_B, operand_outB, operand_out2B, operand_out3B); //initializes wires adder
     
+    // design the multiplexer
+    reg [2:0] select_multi;
+    wire [1026:0] out_multi;
+    seven_multiplexer multi(clk, resetn, regM_Q, reg2M_Q, reg3M_Q, regB_Q, reg2B_Q, reg3B_Q, select_multi, out_multi);
+
     //reg initialization A and B for addition
-    reg  [1026:0] operand_A;   // out
-    reg  [1026:0] operand_B;   // out
-    always @(posedge clk) begin
-        if(~resetn) begin
-            operand_A <= 1027'd0;
-            operand_B <= 1027'd0;
-        end
-    end
+    wire  [1026:0] operand_A;   // out
+    wire  [1026:0] operand_B;   // out
+    assign operand_B = out_multi;
   
     //adder initialization      
     reg subtract;
@@ -154,292 +157,274 @@ module montgomery(
 
     //Shifter initialization 
     reg   shift;
-    reg  [1026:0] out_shift;
-    always @(posedge clk) begin
-        if(~resetn) begin
-            out_shift <= 1027'b0;
-        end
-    end
+    wire  [1027:0] out_shift;
     wire   shift_done;
     reg   enable_shifter;
+    reg [1027:0] in_shift;
   
+    shift_register_two shifter(clk, regoutadder_Q, shift, resetn, enable_shifter, out_shift, shift_done);
+    assign regC_D = out_shift;
+    assign operand_A = regC_Q;
+    assign result = out_shift;
 
-    shift_register shifter(clk, in_shift, shift, shift_direction, resetn, enable_shifter, output_shift, shift_done);
+    // creating another shift_register_two for the A number
+    reg shift_A;
+    reg enable_A;
+    wire [1027:0] out_shifted_A;
+    wire shift_done_A;
+    shift_register_two shiftA(clk,{4'b0, regA_Q}, shift_A, resetn, enable_A, out_shifted_A, shift_done_A);
+    wire [1:0] lsb_A;
+    assign lsb_A = out_shifted_A;
 
-    //this counter thing works, wow
-    reg [9:0] i; // Counter for 1024 for loop
-    reg incrementi;
+    reg [9:0] i;
     always @(posedge clk) begin
-        if (~resetn) begin
-            i <= 10'd0; // Reset the counter when resetn is low
-        end if(incrementi == 1'b1) begin
-            i <= i + 2; // Increment the counter on clock edge
-        end
+        if(~resetn)
+            i <= 10'd0;
     end
 
-    reg start_firstadd;
-  // State multiplexing, doing the first addition, another addition based on A and M bits and shift    
+    reg [1:0] loopState;
+    reg [1:0] nextloopState;
     always @(posedge clk) begin
-        if (start_firstadd) begin //first addition stage
-            // Continuous assignment logic for operand_A
-            operand_A <= regC_Q; // Assign regC_Q when state is 2
-
-            // Logic for operand_B based on regA_Q bits
-            case ({regA_Q[i + 1], regA_Q[i]})
-                2'b01: operand_B <= regB_Q;  // Assign regB_Q if condition matches
-                2'b10: operand_B <= reg2B_Q; // Assign reg2B_Q if condition matches
-                2'b11: operand_B <= reg3B_Q; // Assign reg3B_Q if condition matches
-                default: operand_B <= 10'b0;  // Default case for operand_B
-            endcase
+        if(~resetn) begin
+            loopState <= 2'd0;
+            nextloopState <= 2'd0;
         end
-    
-        start_adder <= start_firstadd; //wait a cycle for regC_Q and RegB to load into adder
-        
-        if(adder_done)begin
-            regC_Q <= regoutadder_D;       //assign output adder to regC
-        end
+        else
+            loopState <= nextloopState;
     end
 
+    reg [3:0] state;
+    reg [3:0] nextstate;
 
-
-    reg start_secondadd;
-    // doing the second addition
     always @(posedge clk) begin
-        if (start_secondadd) begin
-
-            if ((regC_Q[1:0] == 2'd1 && regM_Q[1:0] == 2'd1) || 
-                (regC_Q[1:0] == 2'd3 && regM_Q[1:0] == 2'd3)) begin
-                // Add regC_Q and reg3M_Q
-                operand_B <= reg3M_Q; 
-                operand_A <= regC_Q;  
-            end
-            else if ((regC_Q[1:0] == 2'd2 && regM_Q[1:0] == 2'd1) ||
-                    (regC_Q[1:0] == 2'd2 && regM_Q[1:0] == 2'd3)) begin
-                // Add regC_Q and reg2M_Q
-                operand_B <= reg2M_Q; 
-                operand_A <= regC_Q;  
-            end
-            else if ((regC_Q[1:0] == 2'd3 && regM_Q[1:0] == 2'd1) || 
-                    (regC_Q[1:0] == 2'd1 && regM_Q[1:0] == 2'd3)) begin
-                // Add regC_Q and regM_Q
-                operand_B <= regM_Q; 
-                operand_A <= regC_Q; 
-            end
-            else begin
-                operand_B <= 10'b0; 
-                operand_A <= regC_Q; 
-            end 
-        end
-
-        start_adder <= start_secondadd; //wait a cycle for regC_Q and RegB to load into adder before addition
-            
-        regC_Q <= out_shift;
-    end
-    assign in_shift = regoutadder_Q;
-
-    
-    reg start_modulo;
-    reg  [1023:0] regComp;   // out 
-    reg done_comp;
-    
-    //Finite state machine should set substract to enabled here
-    always @(posedge clk) begin
-        if(start_modulo) begin
-            operand_A <= regC_Q;
-            operand_B <= regM_Q;
-            regComp <= regoutadder_Q;
-                if(adder_done && ~regComp[1023]) begin
-                    regC_Q <= regComp;
-                    end else begin
-                    done_comp <= 1'b1;
-                    end
-        end else regComp <= 10'b0;
-    end
-
-    assign result = (done_comp) ? regC_Q : 1024'b0;
-
-    //State Machine shifting
-    reg [2:0] state, nextstate;   
-        always @(posedge clk)
-    begin
         if(~resetn)	state <= 3'd0;
         else        state <= nextstate;
     end
-    reg regDone;
-    
-    always @(*) begin //state descriptions
-        case(state)
-        
-        // waiting stage
-            3'd0: begin
-                regA_en        <= 1'b1;
-                regB_en        <= 1'b1;
-                reg2B_en       <= 1'b1; 
-                reg3B_en       <= 1'b1;
-                regM_en        <= 1'b1;
-                reg2M_en       <= 1'b1;
-                reg3M_en       <= 1'b1;
-                regC_en        <= 1'b1;
-                
-                subtract       <= 1'b0;
-                i              <= 9'b0;
-                start_secondadd<= 1'b0;
-                start_firstadd <= 1'b0;
-                start_adder    <= 1'b0;
-                shift          <= 1'b0;
-                done_comp      <= 1'b0;
-                //adder_done     <= 1'b0;
-                //shift_done     <= 1'b0;
-                enable_shifter <= 1'b1;
-                regDone        <= 1'b0;
-                shift_direction   <= 1'b1;
-            end
-            
-            // preparation stage;
-            3'd1: begin
-                subtract       <= 1'b0;
-                i              <= 9'b0;
-                incrementi     <= 1'b0;
-                start_adder    <= 1'b0;
-                //shift          <= 1'b1;
-                done_comp      <= 1'b0;
-                //adder_done     <= 1'b0;
-                //shift_done     <= 1'b0;
-                enable_shifter <= 1'b1;
-                shift_direction   <= 1'b1;
-            end
-            
-            // First addition stage
-            3'd2: begin
-                start_firstadd <= 1'b1;
-                start_secondadd<= 1'b0;
-                subtract       <= 1'b0;
-                start_adder    <= 1'b1; //start the adder for 
-                //shift          <= 1'b0;
-                done_comp      <= 1'b0;
-                enable_shifter <= 1'b0;
-            end
-            
-            //second addition plus shift stage
-            3'd3: begin
-                start_firstadd <= 1'b0;
-                start_secondadd<= 1'b1;
-                subtract       <= 1'b0;
-                incrementi     <= 1'b0;
-                start_firstadd <= 1'b0;
-                start_adder    <= 1'b0;
-                //shift          <= 1'b0;
-                done_comp      <= 1'b0;
-                //shift_done     <= 1'b0;
-                enable_shifter <= 1'b0;
-                shift_direction    <= 1'b0;
-            end
-            
-            //subtracting stage
-            3'd4: begin
-                start_modulo   <= 1'b1;
-                subtract       <= 1'b1;
-                i              <= 9'b0;
-                incrementi     <= 1'b0;
-                start_adder    <= 1'b1;
-                //shift          <= 1'b0;
-                done_comp      <= 1'b0;
-                //shift_done     <= 1'b0;
-                enable_shifter <= 1'b0;
-            end
-            //end stage
-            3'd5: begin
-                subtract       <= 1'b0;
-                i              <= 9'b0;
-                incrementi     <= 1'b0;
-                start_adder    <= 1'b0;
-                //shift          <= 1'b0;
-                done_comp      <= 1'b0;
-                //shift_done     <= 1'b0;
-                enable_shifter <= 1'b0;
-                regDone        <= 1'b1;
-            end
-            
-            default: begin
-                regA_en        <= 1'b1;
-                regB_en        <= 1'b1;
-                reg2B_en       <= 1'b1; 
-                reg3B_en       <= 1'b1;
-                regM_en        <= 1'b1;
-                reg2M_en       <= 1'b1;
-                reg3M_en       <= 1'b1;
-                regC_en        <= 1'b0;
-                start_secondadd<= 1'b0;
-                start_firstadd <= 1'b0;
-                i              <= 9'b0;
-                incrementi     <= 1'b0;
-                start_adder    <= 1'b0;
-                shift          <= 1'b0;
-                done_comp      <= 1'b0;
-                //shift_done     <= 1'b0;
-                enable_shifter <= 1'b0;
-                regDone        <= 1'b0;
-                shift_direction   <= 1'b0;
-            end
-        endcase
-    end    
-        
-    //finite state machine
-        
-        
+
+    // ~~~~ FSM ~~~~
+    // Enable pin
     always @(posedge clk) begin
-        case(state)
-            // waiting stage
-            3'd0: begin
-                if(start) begin
-                    nextstate <= 3'd1;
-                    end
-            end
-            
-            //Preparation stage
-            3'd1: begin
-                if(prep_done_M && prep_done_B) begin
-                    nextstate <= 3'd2;
+        case (state)
+            // IDLE state
+            3'd0:   
+                begin
+                    done <= 1'b0;
+
+                   regA_en <= 1'd0;
+                   regB_en <= 1'd0;
+                   regM_en <= 1'd0;
+
+                   reg2B_en <= 1'd0;
+                   reg3B_en <= 1'd0;
+
+                   reg2M_en <= 1'd0;
+                   reg3M_en <= 1'd0; 
+
+                   regC_en <= 1'd0;
+                   regoutadder_en <= 1'd0;
+
+                   // reset the 2 shifter of A
+                   shift_A <= 1'd0; 
+                   enable_A <= 1'd0;
                 end
-            end
-            
-            //For loop stage(multiplexing, 1st addition
-            3'd2: begin
-                if(adder_done == 1'b1) begin
-                    nextstate <= 3'd3;
-                    incrementi<= 1'b1; //one clock cycle incrementi is high(between switch from st2 to st3
-                end else begin
-                    incrementi<= 1'b0;
+            // Preparing the 6 multiplexer
+            3'd1:
+                begin
+                    i <= 10'd0;
+
+                   regA_en <= 1'd1;
+                   regB_en <= 1'd1;
+                   regM_en <= 1'd1;
+
+                   reg2B_en <= 1'd1;
+                   reg3B_en <= 1'd1;
+
+                   reg2M_en <= 1'd1;
+                   reg3M_en <= 1'd1; 
+
+                   enable_A <= 1'd1;
                 end
-            end
-            
-            //2nd addition, shift)
-            3'd3: begin
-                if(i == 10'd512) begin
-                    nextstate <= 3'd4;
-                end if(shift_done == 1'b1) begin
-                    nextstate <= 3'd2;
+            // Do the loop
+            3'd2:
+                begin
+                    // Fix the registers
+                   regA_en <= 1'd0;
+                   regB_en <= 1'd0;
+                   regM_en <= 1'd0;
+
+                   reg2B_en <= 1'd0;
+                   reg3B_en <= 1'd0;
+
+                   reg2M_en <= 1'd0;
+                   reg3M_en <= 1'd0; 
+
+                   // stop saving the A
+                   enable_A <= 1'd0;
+
+                   // output the adder
+                   regoutadder_en <= 1'b1;
                 end
-            end
-            
-            //While loop stage
-            3'd4: begin
-                if(done_comp) begin
-                    nextstate <= 3'd5;
+            // Conditional Subtraction
+            3'd3:
+                begin
+                    reg2B_en <= 1'd1; //DUMMY TO BE REMOVED
                 end
-            end
-            
-            //RegC_Q contains answer
-            3'd5: begin
-            nextstate <= 3'd0;
-            end
-            
-            default: begin
-            nextstate <= 3'd0;
-            incrementi<= 1'b0;
-            end
+            // Finish state
+            3'd4:
+                begin
+                    done <= 1'b1;
+                end
+            default: 
+                begin
+                   regA_en <= 1'd0;
+                   regB_en <= 1'd0;
+                   regM_en <= 1'd0;
+
+                   reg2B_en <= 1'd0;
+                   reg3B_en <= 1'd0;
+
+                   reg2M_en <= 1'd0;
+                   reg3M_en <= 1'd0; 
+
+                   regC_en <= 1'd0;
+                   regoutadder_en <= 1'd0;
+                end
         endcase
     end
+
+    reg incremented;
+
+    // State switching
+    always @(posedge clk) begin
+        // When start signal sent we start
+        case (state)
+            3'd0: 
+                begin 
+                    incremented <= 1'b0;
+                    if(start == 1'd1)
+                        nextstate <= 3'd1;
+                end
+            3'd1:
+                begin
+                    if(prep_done_B && prep_done_M)
+                        nextstate <= 3'd2;
+                end
+            3'd2:
+                begin
+                    if(i >= 10'd1022)
+                        nextstate <= 3'd3;
+                    else if(loopState == 2'd0) begin
+                        nextloopState <= 2'd1;
+                        incremented <= 1'b0;
+                    end
+                    else if(loopState == 2'd3 && ~incremented) begin // finished one loop
+                        i <= i + 2; // something goes wrong
+                        incremented <= 1'b1;
+                    end
+                end
+            3'd3:
+                begin
+                    // IDK if this comparision is correct
+                    if(out_shift < {3'b0, in_m})
+                        nextstate <= 3'd4;
+                end
+            3'd4: 
+                nextstate <= 3'd0;
+            default: 
+                nextstate <= 3'd0;
+        endcase
+ 
+    end
+
+    reg[1:0] sent; // check if signal to start already sent
+    reg ready_second ; // to delay by one the start
+    reg skip_second; // to skip in the last case
+
+    // FSM of the loop
+    always @(posedge clk) begin
+        case(loopState)
+            2'd0:
+                begin
+                    shift_A <= 1'd0; // stop the shift
+                    shift <= 1'd0;
+                    ready_second <= 1'b0;
+                    sent <= 2'd0;
+                    skip_second <= 1'b0;
+                    if(lsb_A == 2'd1)
+                        select_multi <= 3'b100;
+                    else if(lsb_A == 2'd2)
+                        select_multi <= 3'b101;
+                    else if(lsb_A == 2'd3)
+                        select_multi <= 3'b110;
+                    else
+                        select_multi <= 3'b000;
+                end
+            2'd1:
+                begin
+                    subtract <= 1'b0;
+                    regC_en <= 1'b1;
+                    // one pulse to do the addition
+                    if(sent == 2'd0) begin
+                        start_adder <= 1'b1;
+                        sent <= 2'd1;
+                    end
+                    else begin
+                        start_adder <= 1'b0;
+                        enable_shifter <= 1'b1; //to write into memory
+                    end
+                end
+            2'd2:
+                begin
+                    if(sent == 2'd1 && ready_second == 1'b0) begin // if the second operation didn't start yet
+                        if((operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b11))
+                            select_multi <= 3'b011;
+                        else if((operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b11))
+                            select_multi <= 3'b010;
+                        else if((operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b11))
+                            select_multi <= 3'b001;
+                        else
+                            select_multi <= 3'b000; // DUMMY OPERATION TO BE REMOVED FOR BETTER PERF
+
+                        ready_second <= 1'b1;
+                    end else if(sent == 2'd1 && ready_second == 1'b1) begin
+                        start_adder <= 1'b1;
+                        sent <= 2'd2;
+                    end else 
+                        start_adder <= 1'b0;
+                    
+                end
+            2'd3:
+                begin
+                    enable_shifter <= 1'd0; // stop wirting to the shifter
+                    shift_A <= 1'd1; // do one shift
+                    shift <= 1'd1;   // do the 2 shift for the C
+                end
+        endcase
+    end
+
+    // State switching
+    always @(posedge clk) begin
+        if(state == 3'd2) begin
+            case (loopState)
+                2'd0: nextloopState <= 2'd1;
+                2'd1: begin
+                    if(adder_done)
+                        nextloopState <= 2'd2;
+                end
+                2'd2: begin
+                    if(adder_done || skip_second)
+                        nextloopState <= 2'd3;
+                end
+                2'd3: begin 
+                    if(shift_done) begin
+                        loopState <= 2'd0;
+                        nextloopState <= 2'd0; // change quicker idk if I am allowed to ?
+                    end
+                end
+                default: nextloopState <= 2'd0;
+            endcase
+        end
+    end
+
     
-    assign done = regDone;
 endmodule
