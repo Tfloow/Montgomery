@@ -34,21 +34,21 @@ module montgomery(
     
     // Definition register B 
     reg          regB_en;   
-    wire [1023:0] regB_D;   // in
-    reg  [1023:0] regB_Q;   // out
+    wire [1026:0] regB_D;   // in
+    reg  [1026:0] regB_Q;   // out
     always @(posedge clk)
     begin
-        if(~resetn)         regB_Q = 1024'd0;
+        if(~resetn)         regB_Q = 1027'd0;
         else if (regB_en)   regB_Q <= regB_D; //If not reset, paste input for b to register b
     end
   
       // Definition register 2B 
     reg          reg2B_en;   
-    wire [1024:0] reg2B_D;   // in
-    reg  [1024:0] reg2B_Q;   // out
+    wire [1026:0] reg2B_D;   // in
+    reg  [1026:0] reg2B_Q;   // out
     always @(posedge clk)
     begin
-        if(~resetn)         reg2B_Q = 1025'd0;
+        if(~resetn)         reg2B_Q = 1027'd0;
         else if (reg2B_en)   reg2B_Q <= reg2B_D;
     end
   
@@ -64,21 +64,21 @@ module montgomery(
     
         // Definition register M
     reg          regM_en;   
-    wire [1023:0] regM_D;   // in
-    reg  [1023:0] regM_Q;   // out
+    wire [1026:0] regM_D;   // in
+    reg  [1026:0] regM_Q;   // out
     always @(posedge clk)
     begin
-        if(~resetn)         regM_Q = 1024'd0;
+        if(~resetn)         regM_Q = 1027'd0;
         else if (regM_en)   regM_Q <= regM_D; //If not reset, paste input for m to register b
     end
     
             // Definition register 2M
     reg          reg2M_en;   
-    wire [1024:0] reg2M_D;   // in
-    reg  [1024:0] reg2M_Q;   // out
+    wire [1026:0] reg2M_D;   // in
+    reg  [1026:0] reg2M_Q;   // out
     always @(posedge clk)
     begin
-        if(~resetn)         reg2M_Q = 1025'd0;
+        if(~resetn)         reg2M_Q = 1027'd0;
         else if (reg2M_en)   reg2M_Q <= reg2M_D;
     end
     
@@ -125,12 +125,12 @@ module montgomery(
     wire prep_done_B;
       
             //connecting shift_add with the registers
-    assign regM_D = operand_outM;
-    assign reg2M_D = operand_out2M;
+    assign regM_D = {3'b0, operand_outM};
+    assign reg2M_D = {2'b0, operand_out2M};
     assign reg3M_D = operand_out3M;
     
-    assign regB_D = operand_outB;
-    assign reg2B_D = operand_out2B;
+    assign regB_D = {3'b0, operand_outB};
+    assign reg2B_D = {2'b0, operand_out2B};
     assign reg3B_D = operand_out3B;
     
     reg shift_direction;
@@ -138,6 +138,8 @@ module montgomery(
     shift_add_123   shiftM(clk, in_m, start, resetn, prep_done_M, operand_outM, operand_out2M, operand_out3M); //initializes wires adder
     shift_add_123   shiftB(clk, in_b, start, resetn, prep_done_B, operand_outB, operand_out2B, operand_out3B); //initializes wires adder
     
+    // design the multiplexer
+
     //reg initialization A and B for addition
     wire  [1026:0] operand_A;   // out
     wire  [1026:0] operand_B;   // out
@@ -159,6 +161,15 @@ module montgomery(
     assign regC_D = out_shift;
     assign operand_A = regC_Q;
 
+    // creating another shift_register_two for the A number
+    reg shift_A;
+    reg enable_A;
+    wire [1025:0] out_shifted_A;
+    wire shift_done_A;
+    shift_register_two shiftA(clk,{4'b0, in_a}, shift_A, resetn, enable_A, out_shifted_A, shift_done_A);
+    wire [1:0] lsb_A;
+    assign lsb_A = out_shifted_A;
+
     reg [9:0] i;
     always @(posedge clk) begin
         if(~resetn)
@@ -166,9 +177,12 @@ module montgomery(
     end
 
     reg [1:0] loopState;
+    reg [1:0] nextloopState;
     always @(posedge clk) begin
         if(~resetn)
             loopState <= 2'd0;
+        else
+            state <= nextloopState;
     end
 
     reg [3:0] state;
@@ -272,7 +286,7 @@ module montgomery(
                 begin
                     if(i >= 10'd1022)
                         nextstate <= 3'd3;
-                    else 
+                    else if(loopState == 2'd3) // finished one loop
                         i <= i + 2;
                 end
             3'd3:
@@ -285,6 +299,23 @@ module montgomery(
                 nextstate <= 3'd0;
         endcase
  
+    end
+
+    // FSM of the loop
+    always @(posedge clk) begin
+        case(loopState)
+            1'd0:
+                begin
+                    if(lsb_A == 2'd1)
+                        operand_A <= regB_D;
+                    else if(lsb_A == 2'd2)
+                        operand_A <= reg2B_D;
+                    else if(lsb_A == 2'd3)
+                        operand_A <= reg3B_D;
+                    else
+                        operand_A <= 1026'b0;
+                end
+        endcase
     end
 
     
