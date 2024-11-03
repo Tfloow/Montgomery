@@ -162,7 +162,7 @@ module montgomery(
     reg   enable_shifter;
     reg [1027:0] in_shift;
   
-    shift_register_two shifter(clk, regoutadder_D, shift, resetn, enable_shifter, out_shift, shift_done);
+    shift_register_two shifter(clk, regoutadder_Q, shift, resetn, enable_shifter, out_shift, shift_done);
     assign regC_D = out_shift;
     assign operand_A = regC_Q;
     assign result = out_shift;
@@ -172,7 +172,7 @@ module montgomery(
     reg enable_A;
     wire [1027:0] out_shifted_A;
     wire shift_done_A;
-    shift_register_two shiftA(clk,{4'b0, in_a}, shift_A, resetn, enable_A, out_shifted_A, shift_done_A);
+    shift_register_two shiftA(clk,{4'b0, regA_Q}, shift_A, resetn, enable_A, out_shifted_A, shift_done_A);
     wire [1:0] lsb_A;
     assign lsb_A = out_shifted_A;
 
