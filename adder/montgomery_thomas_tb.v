@@ -45,6 +45,8 @@ module tb_montgomery();
         $dumpvars(1, uut.shiftM);
         $dumpvars(1, uut.shiftB);
         $dumpvars(1, uut.shiftB.adder);
+        $dumpvars(1, uut.multi);
+        $dumpvars(1, uut.shiftA);
         $dumpvars(1, uut.adder);
         $dumpvars(1, uut.shifter);
 

@@ -24,6 +24,8 @@ module shift_register_two(
         // writing to memory
         if(enable) begin
             current_number <= in_number;
+            // already outputing 
+            out_shift <= in_number;
             regDone <= 1'b0;
         end
         
