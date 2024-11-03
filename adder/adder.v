@@ -207,7 +207,7 @@ module mpadder(
 
             2'd1   : begin
             
-                if(count >= 5'd16) begin // will repeat 16 times in the loop state 1 and last one in state 2
+                if(count >= 5'd17) begin // will repeat 16 times in the loop state 1 and last one in state 2
                     nextstate <= 2'd2;
                  end else begin
                     nextstate <= 2'd1;

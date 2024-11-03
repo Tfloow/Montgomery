@@ -4,10 +4,10 @@ module shift_register_two(
     input           shift,
     input           restn,
     input           enable,
-    output reg [1025 :0] out_shift,
+    output reg [1027:0] out_shift,
     output wire        shift_done);
     
-    reg [1024:0] current_number;
+    reg [1027:0] current_number;
     reg regDone; reg delayRegDone;
     
     assign shift_done = regDone;

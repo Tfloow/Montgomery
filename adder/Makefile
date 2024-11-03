@@ -8,6 +8,11 @@ multiplexer:
 	vvp seven_multiplexer_tb.vvp
 	gtkwave tb_multi.vcd
 
+adder:
+	iverilog -o adder_tb.vvp adder_tb.v 
+	vvp adder_tb.vvp
+	gtkwave mpadder.vcd
+
 clean:
 	rm *.vvp 
 	rm *.vcd

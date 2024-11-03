@@ -157,7 +157,7 @@ module montgomery(
 
     //Shifter initialization 
     reg   shift;
-    wire  [1025:0] out_shift;
+    wire  [1027:0] out_shift;
     wire   shift_done;
     reg   enable_shifter;
     reg [1027:0] in_shift;
@@ -169,7 +169,7 @@ module montgomery(
     // creating another shift_register_two for the A number
     reg shift_A;
     reg enable_A;
-    wire [1025:0] out_shifted_A;
+    wire [1027:0] out_shifted_A;
     wire shift_done_A;
     shift_register_two shiftA(clk,{4'b0, in_a}, shift_A, resetn, enable_A, out_shifted_A, shift_done_A);
     wire [1:0] lsb_A;
@@ -347,6 +347,7 @@ module montgomery(
             2'd1:
                 begin
                     subtract <= 1'b0;
+                    //regC_en <= 1'b1;
                     // one pulse to do the addition
                     if(sent == 2'd0) begin
                         start_adder <= 1'b1;
@@ -367,10 +368,10 @@ module montgomery(
                         else if((operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b11))
                             select_multi <= 3'b001;
                         else
-                            skip_second <= 1'b1;
+                            select_multi <= 3'b000; // DUMMY OPERATION TO BE REMOVED FOR BETTER PERF
 
                         ready_second <= 1'b1;
-                    end else if(sent == 2'd1 && ready_second == 1'b1 && ~skip_second) begin
+                    end else if(sent == 2'd1 && ready_second == 1'b1) begin
                         start_adder <= 1'b1;
                         sent <= 2'd2;
                     end else 

@@ -1,5 +1,5 @@
-a = 0x0993
-b = 0x1327
+a = 0x0bb8
+b = 0X03e8
 
 print(hex(a+b))
 
