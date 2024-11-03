@@ -32,11 +32,12 @@ module shift_register_two(
         // shifting
         if(shift) begin
             out_shift <= (current_number >> 2);
-            delayRegDone <= 1'b1;
-        end
+            regDone <= 1'b1;
+        end else 
+            regDone <= 1'b0;
 
         // delay done
-        regDone <= delayRegDone;
+        //regDone <= delayRegDone;
     end
     
 endmodule

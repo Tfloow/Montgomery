@@ -12,7 +12,7 @@ module montgomery(
     input  [1023:0] in_b,
     input  [1023:0] in_m,
     output [1024:0] result,
-    output          done
+    output   reg       done
         );
 
     // Student tasks:
@@ -165,6 +165,7 @@ module montgomery(
     shift_register_two shifter(clk, regoutadder_D, shift, resetn, enable_shifter, out_shift, shift_done);
     assign regC_D = out_shift;
     assign operand_A = regC_Q;
+    assign result = out_shift;
 
     // creating another shift_register_two for the A number
     reg shift_A;
@@ -207,6 +208,8 @@ module montgomery(
             // IDLE state
             3'd0:   
                 begin
+                    done <= 1'b0;
+
                    regA_en <= 1'd0;
                    regB_en <= 1'd0;
                    regM_en <= 1'd0;
@@ -257,6 +260,9 @@ module montgomery(
 
                    // stop saving the A
                    enable_A <= 1'd0;
+
+                   // output the adder
+                   regoutadder_en <= 1'b1;
                 end
             // Conditional Subtraction
             3'd3:
@@ -266,25 +272,27 @@ module montgomery(
             // Finish state
             3'd4:
                 begin
-                    reg2B_en <= 1'd1; //DUMMY TO BE REMOVED
+                    done <= 1'b1;
                 end
             default: 
                 begin
-                   regA_en <= 0'd0;
-                   regB_en <= 0'd0;
-                   regM_en <= 0'd0;
+                   regA_en <= 1'd0;
+                   regB_en <= 1'd0;
+                   regM_en <= 1'd0;
 
-                   reg2B_en <= 0'd0;
-                   reg3B_en <= 0'd0;
+                   reg2B_en <= 1'd0;
+                   reg3B_en <= 1'd0;
 
-                   reg2M_en <= 0'd0;
-                   reg3M_en <= 0'd0; 
+                   reg2M_en <= 1'd0;
+                   reg3M_en <= 1'd0; 
 
-                   regC_en <= 0'd0;
-                   regoutadder_en <= 0'd0;
+                   regC_en <= 1'd0;
+                   regoutadder_en <= 1'd0;
                 end
         endcase
     end
+
+    reg incremented;
 
     // State switching
     always @(posedge clk) begin
@@ -292,6 +300,7 @@ module montgomery(
         case (state)
             3'd0: 
                 begin 
+                    incremented <= 1'b0;
                     if(start == 1'd1)
                         nextstate <= 3'd1;
                 end
@@ -304,17 +313,23 @@ module montgomery(
                 begin
                     if(i >= 10'd1022)
                         nextstate <= 3'd3;
-                    else if(loopState == 2'd0)
+                    else if(loopState == 2'd0) begin
                         nextloopState <= 2'd1;
-                    else if(loopState == 2'd3) // finished one loop
-                        i <= i + 1;
+                        incremented <= 1'b0;
+                    end
+                    else if(loopState == 2'd3 && ~incremented) begin // finished one loop
+                        i <= i + 2; // something goes wrong
+                        incremented <= 1'b1;
+                    end
                 end
             3'd3:
                 begin
                     // IDK if this comparision is correct
-                    //if(out_shift < in_M)
-                        nextstate <= 3'd0;
+                    if(out_shift < {3'b0, in_m})
+                        nextstate <= 3'd4;
                 end
+            3'd4: 
+                nextstate <= 3'd0;
             default: 
                 nextstate <= 3'd0;
         endcase
@@ -347,7 +362,7 @@ module montgomery(
             2'd1:
                 begin
                     subtract <= 1'b0;
-                    //regC_en <= 1'b1;
+                    regC_en <= 1'b1;
                     // one pulse to do the addition
                     if(sent == 2'd0) begin
                         start_adder <= 1'b1;
@@ -400,7 +415,12 @@ module montgomery(
                     if(adder_done || skip_second)
                         nextloopState <= 2'd3;
                 end
-                2'd3: nextloopState <= 2'd0; 
+                2'd3: begin 
+                    if(shift_done) begin
+                        loopState <= 2'd0;
+                        nextloopState <= 2'd0; // change quicker idk if I am allowed to ?
+                    end
+                end
                 default: nextloopState <= 2'd0;
             endcase
         end
