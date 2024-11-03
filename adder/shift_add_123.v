@@ -1,5 +1,5 @@
 `include "shift_register.v"
-`include "adder.v"
+//`include "adder.v"
 
 module shift_add_123(
     input clk,

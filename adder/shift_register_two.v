@@ -1,10 +1,10 @@
-module shift_register(
+module shift_register_two(
     input           clk,
-    input [1023:0]  in_number,
+    input [1027:0]  in_number,
     input           shift,
     input           restn,
     input           enable,
-    output reg [1024:0] out_shift,
+    output reg [1025 :0] out_shift,
     output wire        shift_done);
     
     reg [1024:0] current_number;
@@ -16,8 +16,8 @@ module shift_register(
     always @ (posedge clk) begin
     // Reset
         if(~restn) begin
-            current_number <= 1025'b0;
-            out_shift <= 1025'b0;
+            current_number <= 1028'b0;
+            out_shift <= 1028'b0;
             regDone = 1'b0;
         end
         
@@ -29,12 +29,9 @@ module shift_register(
         
         // shifting
         if(shift) begin
-            out_shift <= (current_number << 1);
+            out_shift <= (current_number >> 2);
             delayRegDone <= 1'b1;
         end
-
-        if(delayRegDone)
-            delayRegDone <= 1'b0;
 
         // delay done
         regDone <= delayRegDone;

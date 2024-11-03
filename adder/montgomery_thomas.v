@@ -1,5 +1,7 @@
 `timescale 1ns / 1ps
 `include "adder.v"
+`include "shift_add_123.v"
+`include "shift_register_two.v"
 
 module montgomery(
   input           clk,
@@ -32,21 +34,21 @@ module montgomery(
     
     // Definition register B 
     reg          regB_en;   
-    wire [1026:0] regB_D;   // in
-    reg  [1026:0] regB_Q;   // out
+    wire [1023:0] regB_D;   // in
+    reg  [1023:0] regB_Q;   // out
     always @(posedge clk)
     begin
-        if(~resetn)         regB_Q = 1027'd0;
+        if(~resetn)         regB_Q = 1024'd0;
         else if (regB_en)   regB_Q <= regB_D; //If not reset, paste input for b to register b
     end
   
       // Definition register 2B 
     reg          reg2B_en;   
-    wire [1026:0] reg2B_D;   // in
-    reg  [1026:0] reg2B_Q;   // out
+    wire [1024:0] reg2B_D;   // in
+    reg  [1024:0] reg2B_Q;   // out
     always @(posedge clk)
     begin
-        if(~resetn)         reg2B_Q = 1027'd0;
+        if(~resetn)         reg2B_Q = 1025'd0;
         else if (reg2B_en)   reg2B_Q <= reg2B_D;
     end
   
@@ -62,21 +64,21 @@ module montgomery(
     
         // Definition register M
     reg          regM_en;   
-    wire [1026:0] regM_D;   // in
-    reg  [1026:0] regM_Q;   // out
+    wire [1023:0] regM_D;   // in
+    reg  [1023:0] regM_Q;   // out
     always @(posedge clk)
     begin
-        if(~resetn)         regM_Q = 1027'd0;
+        if(~resetn)         regM_Q = 1024'd0;
         else if (regM_en)   regM_Q <= regM_D; //If not reset, paste input for m to register b
     end
     
             // Definition register 2M
     reg          reg2M_en;   
-    wire [1026:0] reg2M_D;   // in
-    reg  [1026:0] reg2M_Q;   // out
+    wire [1024:0] reg2M_D;   // in
+    reg  [1024:0] reg2M_Q;   // out
     always @(posedge clk)
     begin
-        if(~resetn)         reg2M_Q = 1027'd0;
+        if(~resetn)         reg2M_Q = 1025'd0;
         else if (reg2M_en)   reg2M_Q <= reg2M_D;
     end
     
@@ -111,13 +113,13 @@ module montgomery(
     end
           
     //shifting preparation stage
-    wire [1026:0] operand_outM;
-    wire [1026:0] operand_out2M;
-    wire [1026:0] operand_out3M;
+    wire [1023:0] operand_outM;
+    wire [1024:0] operand_out2M;
+    wire [1027:0] operand_out3M;
     
-    wire [1026:0] operand_outB;
-    wire [1026:0] operand_out2B;
-    wire [1026:0] operand_out3B;
+    wire [1023:0] operand_outB;
+    wire [1024:0] operand_out2B;
+    wire [1027:0] operand_out3B;
     
     wire prep_done_M;
     wire prep_done_B;
@@ -137,14 +139,8 @@ module montgomery(
     shift_add_123   shiftB(clk, in_b, start, resetn, prep_done_B, operand_outB, operand_out2B, operand_out3B); //initializes wires adder
     
     //reg initialization A and B for addition
-    reg  [1026:0] operand_A;   // out
-    reg  [1026:0] operand_B;   // out
-    always @(posedge clk) begin
-        if(~resetn) begin
-            operand_A <= 1027'd0;
-            operand_B <= 1027'd0;
-        end
-    end
+    wire  [1026:0] operand_A;   // out
+    wire  [1026:0] operand_B;   // out
   
     //adder initialization      
     reg subtract;
@@ -154,17 +150,142 @@ module montgomery(
 
     //Shifter initialization 
     reg   shift;
-    reg  [1026:0] out_shift;
-    always @(posedge clk) begin
-        if(~resetn) begin
-            out_shift <= 1027'b0;
-        end
-    end
+    wire  [1025:0] out_shift;
     wire   shift_done;
     reg   enable_shifter;
+    reg [1027:0] in_shift;
   
+    shift_register_two shifter(clk, regoutadder_D, shift, resetn, enable_shifter, out_shift, shift_done);
+    assign regC_D = out_shift;
+    assign operand_A = regC_Q;
 
-    shift_register shifter(clk, in_shift, shift, shift_direction, resetn, enable_shifter, output_shift, shift_done);
+    reg [9:0] i;
+    always @(posedge clk) begin
+        if(~resetn)
+            i <= 10'd0;
+    end
+
+    reg [1:0] loopState;
+    always @(posedge clk) begin
+        if(~resetn)
+            loopState <= 2'd0;
+    end
+
+    reg [3:0] state;
+    reg [3:0] nextstate;
+
+    always @(posedge clk) begin
+        if(~resetn)	state <= 3'd0;
+        else        state <= nextstate;
+    end
+
+    // ~~~~ FSM ~~~~
+    // Enable pin
+    always @(posedge clk) begin
+        case (state)
+            // IDLE state
+            3'd0:   
+                begin
+                   regA_en <= 1'd0;
+                   regB_en <= 1'd0;
+                   regM_en <= 1'd0;
+
+                   reg2B_en <= 1'd0;
+                   reg3B_en <= 1'd0;
+
+                   reg2M_en <= 1'd0;
+                   reg3M_en <= 1'd0; 
+
+                   regC_en <= 1'd0;
+                   regoutadder_en <= 1'd0;
+                end
+            // Preparing the 6 multiplexer
+            3'd1:
+                begin
+                   regA_en <= 1'd1;
+                   regB_en <= 1'd1;
+                   regM_en <= 1'd1;
+
+                   reg2B_en <= 1'd1;
+                   reg3B_en <= 1'd1;
+
+                   reg2M_en <= 1'd1;
+                   reg3M_en <= 1'd1; 
+                end
+            // Do the loop
+            3'd2:
+                begin
+                    // Fix the registers
+                   regA_en <= 1'd0;
+                   regB_en <= 1'd0;
+                   regM_en <= 1'd0;
+
+                   reg2B_en <= 1'd0;
+                   reg3B_en <= 1'd0;
+
+                   reg2M_en <= 1'd0;
+                   reg3M_en <= 1'd0; 
+                end
+            // Conditional Subtraction
+            3'd3:
+                begin
+                    reg2B_en <= 1'd1; //DUMMY TO BE REMOVED
+                end
+            // Finish state
+            3'd4:
+                begin
+                    reg2B_en <= 1'd1; //DUMMY TO BE REMOVED
+                end
+            default: 
+                begin
+                   regA_en <= 0'd0;
+                   regB_en <= 0'd0;
+                   regM_en <= 0'd0;
+
+                   reg2B_en <= 0'd0;
+                   reg3B_en <= 0'd0;
+
+                   reg2M_en <= 0'd0;
+                   reg3M_en <= 0'd0; 
+
+                   regC_en <= 0'd0;
+                   regoutadder_en <= 0'd0;
+                end
+        endcase
+    end
+
+    // State switching
+    always @(posedge clk) begin
+        // When start signal sent we start
+        case (state)
+            3'd0: 
+                begin 
+                    if(start == 1'd1)
+                        nextstate <= 3'd1;
+                end
+            3'd1:
+                begin
+                    if(prep_done_B && prep_done_M)
+                        nextstate <= 3'd2;
+                end
+            3'd2:
+                begin
+                    if(i >= 10'd1022)
+                        nextstate <= 3'd3;
+                    else 
+                        i <= i + 2;
+                end
+            3'd3:
+                begin
+                    // IDK if this comparision is correct
+                    //if(out_shift < in_M)
+                        nextstate <= 3'd0;
+                end
+            default: 
+                nextstate <= 3'd0;
+        endcase
+ 
+    end
 
     
 endmodule

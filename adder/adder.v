@@ -165,7 +165,7 @@ module mpadder(
             2'd2: begin
                 regA_en        <= 1'b0;
                 regB_en        <= 1'b0;
-                regResult_en   <= 1'b1;
+                regResult_en   <= 1'b0;
                 regCout_en     <= 1'b0;
                 muxCarryIn_sel <= 1'b1;
                 muxA_sel        <= 1'b0;  // Select in_a for shifting
