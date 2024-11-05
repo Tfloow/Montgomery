@@ -30,14 +30,11 @@ module shift_register(
         // shifting
         if(shift) begin
             out_shift <= (current_number << 1);
-            delayRegDone <= 1'b1;
+            regDone <= 1'b1;
         end
 
-        if(delayRegDone)
-            delayRegDone <= 1'b0;
-
-        // delay done
-        regDone <= delayRegDone;
+        if(regDone)
+            regDone <= 1'b0;
     end
     
 endmodule
