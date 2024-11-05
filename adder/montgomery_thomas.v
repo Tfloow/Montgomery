@@ -1,5 +1,9 @@
 `timescale 1ns / 1ps
-
+`include "seven_multiplexer.v"
+`include "shift_register_two.v"
+`include "shift_add_123.v"
+`include "adder.v"
+`include "shift_register.v"
 
 module montgomery(
     input           clk,
@@ -109,6 +113,15 @@ module montgomery(
         if(~resetn)                regoutadder_Q = 1028'd0;
         else if (regoutadder_en)   regoutadder_Q <= regoutadder_D;
     end
+
+    // Definition of the regresult 
+    reg regresult_en;
+    wire [1027:0] regresult_D;
+    reg [1023:0] regresult_Q;
+    always @(posedge clk) begin
+        if(~resetn)                regresult_Q = 1028'd0;
+        else if (regresult_en)   regresult_Q <= regresult_D;
+    end 
           
     //shifting preparation stage
     wire [1023:0] operand_outM;
@@ -162,7 +175,8 @@ module montgomery(
     shift_register_two shifter(clk, regoutadder_Q, shift, resetn, enable_shifter, out_shift, shift_done);
     assign regC_D = out_shift;
     assign operand_A = regC_Q;
-    assign result = out_shift;
+    assign regresult_D = out_shift;
+    assign result = regresult_Q;
 
     // creating another shift_register_two for the A number
     reg shift_A;
@@ -215,13 +229,14 @@ module montgomery(
                    regB_en <= 1'd1;
                    regM_en <= 1'd1;
                     
-                   // trash rn so no reading
+                   // trash rn so no writing
                    reg2B_en <= 1'd0;
                    reg3B_en <= 1'd0;
                    reg2M_en <= 1'd0;
                    reg3M_en <= 1'd0; 
                    regC_en <= 1'd0;
                    regoutadder_en <= 1'd0;
+                   regresult_en <= 1'd0;
 
                    // reset the 2 shifter of A
                    shift_A <= 1'd0; 
@@ -265,11 +280,12 @@ module montgomery(
             // Conditional Subtraction
             3'd3:
                 begin
-                    reg2B_en <= 1'd1; //DUMMY TO BE REMOVED
+                    regresult_en <= 1'd1;
                 end
             // Finish state
             3'd4:
                 begin
+                    regresult_en <= 1'd0;
                     done <= 1'b1;
                 end
             default: 
