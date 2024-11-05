@@ -150,7 +150,7 @@ module montgomery(
     reg subtract;
     wire adder_done;
     reg start_adder;
-    mpadder adder(clk, resetn, start_adder, subtract, operand_A, operand_B, regoutadder_D, adder_done); //initializes wires adder
+    mpadder adder(clk, resetn, start_adder, subtract, operand_B, operand_A, regoutadder_D, adder_done); //initializes wires adder
 
     //Shifter initialization 
     reg   shift;
@@ -291,6 +291,7 @@ module montgomery(
     end
 
     reg incremented;
+    reg subtraction_happening;
 
     // State switching
     always @(posedge clk) begin
@@ -328,9 +329,32 @@ module montgomery(
                 end
             3'd3:
                 begin
-                    // IDK if this comparision is correct
-                    if(out_shift < {3'b0, in_m})
-                        nextstate <= 3'd4;
+                    // stop saving the result
+                    if(adder_done) begin
+                        // we finished 1 sub
+                        if(regoutadder_D[1027] == 1'b1) // smaller no need to update
+                            nextstate <= 3'd4;
+                        else begin 
+                            enable_shifter <= 1'b1; // save the newly calculated diff
+                            subtraction_happening <= 1'b0;
+                        end
+                    end else begin
+                        if(~subtraction_happening) begin
+                            // run if no subtraction is actually going
+                            select_multi <= 3'b001; // select M
+                            // operand_A should also already be C
+                            subtraction_happening <= 1'b1;
+                            enable_shifter <= 1'b0; // to freeze the result
+                            subtract <= 1'b0;       // used just for a dummy register for a one pulse start_adder
+                        end else begin 
+                            subtract <= 1'b1; // activate the subtract mode
+                            // delay by one to make sure the right value is fed
+                            if(subtract <= 1'b0)
+                                start_adder <= 1'b1;
+                            else
+                                start_adder <= 1'b0;
+                        end
+                    end
                 end
             3'd4: 
                 nextstate <= 3'd0;
