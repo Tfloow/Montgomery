@@ -205,37 +205,38 @@ module montgomery(
             // IDLE state
             3'd0:   
                 begin
-                    done <= 1'b0;
-
-                   regA_en <= 1'd0;
-                   regB_en <= 1'd0;
-                   regM_en <= 1'd0;
-
+                    // resetting
+                   done <= 1'b0;
+                   select_multi <= 3'd0;
+                   i <= 10'd0;
+                    
+                   // always read input
+                   regA_en <= 1'd1;
+                   regB_en <= 1'd1;
+                   regM_en <= 1'd1;
+                    
+                   // trash rn so no reading
                    reg2B_en <= 1'd0;
                    reg3B_en <= 1'd0;
-
                    reg2M_en <= 1'd0;
                    reg3M_en <= 1'd0; 
-
                    regC_en <= 1'd0;
                    regoutadder_en <= 1'd0;
 
                    // reset the 2 shifter of A
                    shift_A <= 1'd0; 
                    enable_A <= 1'd0;
+                   shift <= 1'd0;
+                   enable_shifter <= 1'd0;
                 end
             // Preparing the 6 multiplexer
             3'd1:
                 begin
-                    i <= 10'd0;
-
-                   regA_en <= 1'd1;
-                   regB_en <= 1'd1;
-                   regM_en <= 1'd1;
-
+                    
+                    
+                   // to be in write mode
                    reg2B_en <= 1'd1;
                    reg3B_en <= 1'd1;
-
                    reg2M_en <= 1'd1;
                    reg3M_en <= 1'd1; 
 
@@ -298,18 +299,24 @@ module montgomery(
             3'd0: 
                 begin 
                     incremented <= 1'b0;
-                    if(start == 1'd1)
+                    if(start == 1'd1) begin
                         nextstate <= 3'd1;
+                        state <= 3'd1;
+                    end 
                 end
             3'd1:
                 begin
-                    if(prep_done_B && prep_done_M)
+                    if(prep_done_B && prep_done_M) begin
                         nextstate <= 3'd2;
+                        state <= 3'd2;
+                    end
                 end
             3'd2:
                 begin
-                    if(i >= 10'd1022)
+                    if(i >= 10'd1022) begin 
                         nextstate <= 3'd3;
+                        
+                    end
                     else if(loopState == 2'd0) begin
                         nextloopState <= 2'd1;
                         incremented <= 1'b0;
@@ -336,6 +343,7 @@ module montgomery(
     reg[1:0] sent; // check if signal to start already sent
     reg ready_second ; // to delay by one the start
     reg skip_second; // to skip in the last case
+    reg shifted;    // save if i shifted
 
     // FSM of the loop
     always @(posedge clk) begin
@@ -347,6 +355,9 @@ module montgomery(
                     ready_second <= 1'b0;
                     sent <= 2'd0;
                     skip_second <= 1'b0;
+                    shifted <= 1'b0;
+                    
+                    // data preparation
                     if(lsb_A == 2'd1)
                         select_multi <= 3'b100;
                     else if(lsb_A == 2'd2)
@@ -393,8 +404,14 @@ module montgomery(
             2'd3:
                 begin
                     enable_shifter <= 1'd0; // stop wirting to the shifter
-                    shift_A <= 1'd1; // do one shift
-                    shift <= 1'd1;   // do the 2 shift for the C
+                    if(shifted) begin
+                        shift_A <= 1'd0; // do one shift
+                        shift <= 1'd0;   // do the 2 shift for the C
+                    end else begin
+                        shift_A <= 1'd1; // do one shift
+                        shift <= 1'd1;   // do the 2 shift for the C
+                        shifted <= 1'b1;
+                    end
                 end
         endcase
     end
