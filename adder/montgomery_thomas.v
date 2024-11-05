@@ -1,8 +1,5 @@
 `timescale 1ns / 1ps
-`include "adder.v"
-`include "shift_add_123.v"
-`include "shift_register_two.v"
-`include "seven_multiplexer.v"
+
 
 module montgomery(
     input           clk,

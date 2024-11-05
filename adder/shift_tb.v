@@ -1,5 +1,4 @@
 `timescale 1ns / 1ps
-`include "shift_add_123.v"
 
 `define RESET_TIME 25
 `define CLK_PERIOD 10
