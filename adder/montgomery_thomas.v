@@ -466,7 +466,7 @@ module montgomery(
                         nextloopState <= 2'd2;
                 end
                 2'd2: begin
-                    if(adder_done || skip_second)
+                    if(adder_done || skip_second) /// skip second isn't really used for now
                         nextloopState <= 2'd3;
                 end
                 2'd3: begin 
