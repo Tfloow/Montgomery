@@ -206,16 +206,24 @@ module montgomery(
         else        state <= nextstate;
     end
 
+
+    reg[1:0] sent; // check if signal to start already sent
+    reg ready_second ; // to delay by one the start
+    reg skip_second; // to skip in the last case
+    reg shifted;    // save if i shifted
+    reg [1:0] DBG_cond; // to be REMOVED
+    reg [1:0] delay_state;
+
     // ~~~~ FSM ~~~~
     // Enable pin
     always @(posedge clk) begin
         case (state)
             // IDLE state
-            3'd0:   
+            4'd0:   
                 begin
                     // resetting
                    done <= 1'b0;
-                   select_multi <= 3'd0;
+                   select_multi <= 4'd0;
                    finished_loopstate <= 1'b0;
                    subtraction_happening <= 1'b0;
                     
@@ -240,7 +248,7 @@ module montgomery(
                    enable_shifter <= 1'd0;
                 end
             // Preparing the 6 multiplexer
-            3'd1:
+            4'd1:
                 begin
                     
                     
@@ -253,7 +261,7 @@ module montgomery(
                    enable_A <= 1'd1;
                 end
             // Do the loop
-            3'd2:
+            4'd2:
                 begin
                     // Fix the registers
                    regA_en <= 1'd0;
@@ -272,122 +280,8 @@ module montgomery(
                    // output the adder
                    regoutadder_en <= 1'b1;
                 end
-            // Conditional Subtraction
-            3'd3:
-                begin
-                    regresult_en <= 1'd1;
-                end
-            // Finish state
-            3'd4:
-                begin
-                    regresult_en <= 1'd0;
-                    done <= 1'b1;
-                end
-            default: 
-                begin
-                   regA_en <= 1'd0;
-                   regB_en <= 1'd0;
-                   regM_en <= 1'd0;
 
-                   reg2B_en <= 1'd0;
-                   reg3B_en <= 1'd0;
-
-                   reg2M_en <= 1'd0;
-                   reg3M_en <= 1'd0; 
-
-                   regC_en <= 1'd0;
-                   regoutadder_en <= 1'd0;
-                end
-        endcase
-    end
-
-    reg incremented;
-
-
-    // State switching
-    always @(posedge clk) begin
-        // When start signal sent we start
-        case (state)
-            3'd0: 
-                begin 
-                    i <= 11'd0;
-                    incremented <= 1'b0;
-                    if(start == 1'd1) begin
-                        nextstate <= 3'd1;
-                        //state <= 3'd1;
-                    end 
-                end
-            3'd1:
-                begin
-                    if(prep_done_B && prep_done_M) begin
-                        nextstate <= 3'd2;
-                        //state <= 3'd2;
-                    end
-                end
-            3'd2:
-                begin
-                    if(i > 11'd1022) begin 
-                        nextstate <= 3'd3;
-                        finished_loopstate <= 1'b1;
-                    end
-                    else if(loopState == 2'd0) begin
-                        nextloopState <= 2'd1;
-                        incremented <= 1'b0;
-                    end
-                    else if(loopState == 2'd3 && ~incremented) begin // finished one loop
-                        i <= i + 2; // something goes wrong
-                        incremented <= 1'b1;
-                    end
-                end
-            3'd3:
-                begin
-                    //done <= 1'b1; // TO BE REMOVED
-                    // stop saving the result
-                    if(adder_done) begin
-                        // we finished 1 sub
-                        if(regoutadder_D[1027] == 1'b1) // smaller no need to update
-                            nextstate <= 3'd4;
-                        else begin 
-                            enable_shifter <= 1'b1; // save the newly calculated diff
-                            subtraction_happening <= 1'b0;
-                        end
-                    end else begin
-                        if(~subtraction_happening) begin
-                            // run if no subtraction is actually going
-                            select_multi <= 3'b001; // select M
-                            // operand_A should also already be C
-                            subtraction_happening <= 1'b1;
-                            enable_shifter <= 1'b0; // to freeze the result
-                            subtract <= 1'b0;       // used just for a dummy register for a one pulse start_adder
-                        end else begin 
-                            subtract <= 1'b1; // activate the subtract mode
-                            // delay by one to make sure the right value is fed
-                            if(subtract <= 1'b0)
-                                start_adder <= 1'b1;
-                            else
-                                start_adder <= 1'b0;
-                        end
-                    end
-                end
-            3'd4: 
-                nextstate <= 3'd0;
-            default: 
-                nextstate <= 3'd0;
-        endcase
- 
-    end
-
-    reg[1:0] sent; // check if signal to start already sent
-    reg ready_second ; // to delay by one the start
-    reg skip_second; // to skip in the last case
-    reg shifted;    // save if i shifted
-    reg [1:0] DBG_cond; // to be REMOVED
-    reg delay_state;
-
-    // FSM of the loop
-    always @(posedge clk) begin
-        case(loopState)
-            2'd0:
+            4'd3:
                 begin
                     delay_state <= 1'b0;
                     shift_A <= 1'd0; // stop the shift
@@ -397,22 +291,22 @@ module montgomery(
                     skip_second <= 1'b0;
                     shifted <= 1'b0;
                     
-                    if(~finished_loopstate) begin
-                        // data preparation
-                        if(lsb_A == 2'd1)
-                            select_multi <= 3'b100;
-                        else if(lsb_A == 2'd2)
-                            select_multi <= 3'b101;
-                        else if(lsb_A == 2'd3)
-                            select_multi <= 3'b110;
-                        else
-                            select_multi <= 3'b000;
-                    end
+                    // data preparation
+                    if(lsb_A == 2'd1)
+                        select_multi <= 3'b100;
+                    else if(lsb_A == 2'd2)
+                        select_multi <= 3'b101;
+                    else if(lsb_A == 2'd3)
+                        select_multi <= 3'b110;
+                    else
+                        select_multi <= 3'b000;
+                    
                 end
-            2'd1:
+            4'd4:
                 begin
                     subtract <= 1'b0;
                     regC_en <= 1'b1;
+                    delay_state <= 2'd0;
                     // one pulse to do the addition
                     if(sent == 2'd0) begin
                         start_adder <= 1'b1;
@@ -423,9 +317,9 @@ module montgomery(
                         enable_shifter <= 1'b1; //to write into memory
                     end
                 end
-            2'd2:
+            4'd5:
                 begin
-                    if(delay_state) begin
+                    if(delay_state == 2'd3) begin
                         if(sent == 2'd1 && ready_second == 1'b0) begin // if the second operation didn't start yet
                             if((operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b11)) begin
                                 select_multi <= 3'b011;
@@ -457,10 +351,10 @@ module montgomery(
                                 start_adder <= 1'b0;
                         end
                     end else 
-                        delay_state <=- 1'b1;
+                        delay_state <= delay_state + 1'b1;
                     
                 end
-            2'd3:
+            4'd6:
                 begin
                     enable_shifter <= 1'd0; // stop wirting to the shifter
                     if(shifted) begin
@@ -472,32 +366,133 @@ module montgomery(
                         shifted <= 1'b1;
                     end
                 end
+
+
+            // Conditional Subtraction
+            4'd7:
+                begin
+                    regresult_en <= 1'd1;
+                end
+            // Finish state
+            4'd8:
+                begin
+                    regresult_en <= 1'd0;
+                    done <= 1'b1;
+                end
+            default: 
+                begin
+                   regA_en <= 1'd0;
+                   regB_en <= 1'd0;
+                   regM_en <= 1'd0;
+
+                   reg2B_en <= 1'd0;
+                   reg3B_en <= 1'd0;
+
+                   reg2M_en <= 1'd0;
+                   reg3M_en <= 1'd0; 
+
+                   regC_en <= 1'd0;
+                   regoutadder_en <= 1'd0;
+                end
         endcase
     end
 
+    reg incremented;
+
+
     // State switching
     always @(posedge clk) begin
-        if(state == 3'd2) begin
-            case (loopState)
-                2'd0: nextloopState <= 2'd1;
-                2'd1: begin
-                    if(adder_done)
-                        nextloopState <= 2'd2;
+        // When start signal sent we start
+        case (state)
+            4'd0: 
+                begin 
+                    i <= 11'd0;
+                    incremented <= 1'b0;
+                    if(start == 1'd1) begin
+                        nextstate <= 4'd1;
+                        //state <= 3'd1;
+                    end 
                 end
-                2'd2: begin
-                    if(adder_done || skip_second) /// skip second isn't really used for now
-                        nextloopState <= 2'd3;
-                end
-                2'd3: begin 
-                    if(shift_done) begin
-                        loopState <= 2'd0;
-                        nextloopState <= 2'd0; // change quicker idk if I am allowed to ?
+            4'd1:
+                begin
+                    if(prep_done_B && prep_done_M) begin
+                        nextstate <= 4'd2;
+                        //state <= 3'd2;
                     end
                 end
-                default: nextloopState <= 2'd0;
-            endcase
-        end
-    end
+            4'd2:
+                begin
 
+                    nextstate <= 4'd3;
+                    incremented <= 1'b1; // avoid an early incrementation
+
+                end
+            4'd3: 
+                begin
+                    if(i > 11'd1022) begin // escape the loop
+                        nextstate <= 4'd7; 
+                        finished_loopstate <= 1'b1;
+                    end else begin 
+                        if(incremented) begin // add one delay to make sure all the datas are ready
+                            nextstate <= 4'd4;
+                            //incremented <= 1'b0;
+                        end
+                        else begin // finished one loop
+                            i <= i + 2; // something goes wrong
+                            incremented <= 1'b1;
+                        end
+                    end 
+                end
+            4'd4: begin
+                if(adder_done)
+                    nextstate <= 4'd5;
+                    incremented <= 1'b0;
+                end
+            4'd5: begin
+                if(adder_done || skip_second) /// skip second isn't really used for now
+                    nextstate <= 4'd6;
+                end
+            4'd6: begin 
+                if(shift_done) begin
+                    nextstate <= 4'd3;
+                end
+                end
+            4'd7:
+                begin
+                    //done <= 1'b1; // TO BE REMOVED
+                    // stop saving the result
+                    if(adder_done) begin
+                        // we finished 1 sub
+                        if(regoutadder_D[1027] == 1'b1) // smaller no need to update
+                            nextstate <= 4'd8;
+                        else begin 
+                            enable_shifter <= 1'b1; // save the newly calculated diff
+                            subtraction_happening <= 1'b0;
+                        end
+                    end else begin
+                        if(~subtraction_happening) begin
+                            // run if no subtraction is actually going
+                            select_multi <= 3'b001; // select M
+                            // operand_A should also already be C
+                            subtraction_happening <= 1'b1;
+                            enable_shifter <= 1'b0; // to freeze the result
+                            subtract <= 1'b0;       // used just for a dummy register for a one pulse start_adder
+                        end else begin 
+                            subtract <= 1'b1; // activate the subtract mode
+                            // delay by one to make sure the right value is fed
+                            if(subtract <= 1'b0)
+                                start_adder <= 1'b1;
+                            else
+                                start_adder <= 1'b0;
+                        end
+                    end
+                end
+            4'd8: 
+                nextstate <= 4'd0;
+            default: 
+                nextstate <= 4'd0;
+        endcase
+ 
+    end
     
 endmodule
