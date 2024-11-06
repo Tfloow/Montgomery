@@ -1,28 +1,56 @@
 # this is an estimation based on the 64 first and last bits of every operand
-a = 0x2394a8c9e2c6abc0edb8734fb607d38620559f7220a7a45b60a298241a9888760f0aede90b9467975a6cf461e75242d6871a24d024f15ca6ab969a1617a5432363b4792838172caf1dec516490c43b22d592c9f84294af8bfe9ccd0e09cd5a683c84feec717eb638c74228f1393f8ebcf634845a3b1c51f893c2286ef76f49b1
-b = 0x33c211b567e0c0ce6610393b49e77a5fb33183f2ef3bd0c34e15369f3537c592b927242339b723be6c59d907c2cbef8d6afee9803ed39bc4fe2f7773546ed91771322659fdd65ad3402f62be5f34bbdf7ca9aa874d678a9decb13abe8b9c3badbdb709dfee20ec628be2748831cac28e1e027e33eeb69ff23499dc429d74a517
-m = 0x83a6c5c93235f2f4905daaa92deddb7235d196d00c713a582030a113495b64c40d579c795c171370251a7651affcd685caeee9b4b7c1f7ed3c805f565c2ac5ed7e83e68b34ffba6bdeeb98894c6a406a4e6a2ea9d45e0285d4ad9250e6108b07150d513e834ae1d93ba570636737aaedf95d829f9bdb8ceeb0fefd5e1d47ef05
+a = 0x993a45a7ccc9834b9775fbbf1be8566199cf3883f29a2846a7357f314b1b6a719edf9b543addb902a023885c72b83d21d6bc2a14ed8adef3566f0da4c541f83c882bc4a1c21cb045d17eb1f773535af04b82a90c5823ac4f3076dbbd37c7019cb84e7b2e21849abd2860ef93d144c8564492ec8036b3d1a51bd98c94c145d8c3
+b = 0xa21716d123007a82e337ffa9de869fbebb20cd18955897dc2b9e096146b56d5706ee40c1d38b6ab293f1ea65d8d8c98bbaad3ddd301080f3f1e11e02aa5c19b22a62d225bab93a13b629bfb493792fed1b7fa42442888c8e71b6de10dedeaa77a5c8a15bad9380346279ebc55720df62186e222a698a238f472e7d24ad2c6b2f
+m = 0xc195d759bc8a96f3a59c363f4f4d8b596ce12e0aca41fca232eb07944fc92b2f798a902095c69a1c8c3ecd049169fe7ed2d1ae296658546e5b500edcf935e9a1a11ab841332a7a430f188012e42162703fbfba6be85ada06ec9a4fd80dab436c7a60ef5c1aa0a67c4542049b94dc649e57c56f782498df91c78f7c463cb6329d
 
 c = 0
 
-for i in range(0,9,2):
+print(bin(a))
+
+for i in range(0,1023,2):
     print(f"{'_':_<20} i = {i} {'_':_<20}")
     mask = 0b11 << i
     
-    c = c + ((a & mask) * b)
+    print(f"Operand A : {hex(c)}")
+    print(f"Operand B : {hex((((a & mask) >> i) * b))}")
+    print(f"Maks val  : {(((a & mask) >> i))}")
+
+    c = c + (((a & mask) >> i) * b)
     
-    print(hex(c))
-    
+
+
+    print(f"First step : {hex(c)}")
+    print()
+
     if(((c & 0b11) == 1) & ((m & 0b11) == 1) | ((c & 0b11) == 3) & ((m & 0b11) == 3)):
+        print(f"Operand A : {hex(c)}")
+        print(f"Operand B : {hex(3*m)}")
         c = (c + 3*m) >> 2
         print("First")
     elif (((c & 0b11) == 2) & ((m & 0b11) == 1) | ((c & 0b11) == 2) & ((m & 0b11) == 3)):
+        print(f"Operand A : {hex(c)}")
+        print(f"Operand B : {hex(m)}")
         c = (c + 2*m) >> 2
         print("Second")
     elif (((c & 0b11) == 3) & ((m & 0b11) == 1) | ((c & 0b11) == 1) & ((m & 0b11) == 3)):
+        print(f"Operand A : {hex(c)}")
+        print(f"Operand B : {hex(m)}")
         c = (c + m) >> 2
         print("Third")
     else:
         c = c >> 2
         print("Last")
-    print(hex(c))
+    print(f"Second step : {hex(c)}")
+    print()
+
+while(c > m):
+    print(f"{'_':_<20} Condition Subtraction {'_':_<20}")
+    
+    c = c - m
+
+    print(f"After step : {hex(c)}")
+    print()
+
+print(f"Finish : {hex(c)}")
+print()
+

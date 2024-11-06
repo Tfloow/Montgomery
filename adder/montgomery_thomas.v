@@ -1,9 +1,4 @@
 `timescale 1ns / 1ps
-`include "seven_multiplexer.v"
-`include "shift_register_two.v"
-`include "shift_add_123.v"
-`include "adder.v"
-`include "shift_register.v"
 
 module montgomery(
     input           clk,
@@ -163,7 +158,7 @@ module montgomery(
     reg subtract;
     wire adder_done;
     reg start_adder;
-    mpadder adder(clk, resetn, start_adder, subtract, operand_B, operand_A, regoutadder_D, adder_done); //initializes wires adder
+    mpadder adder(clk, resetn, start_adder, subtract, operand_A, operand_B, regoutadder_D, adder_done); //initializes wires adder
 
     //Shifter initialization 
     reg   shift;
@@ -187,10 +182,10 @@ module montgomery(
     wire [1:0] lsb_A;
     assign lsb_A = out_shifted_A;
 
-    reg [9:0] i;
+    reg [10:0] i;
     always @(posedge clk) begin
         if(~resetn)
-            i <= 10'd0;
+            i <= 11'd0;
     end
 
     reg [1:0] loopState;
@@ -206,6 +201,8 @@ module montgomery(
 
     reg [3:0] state;
     reg [3:0] nextstate;
+    reg finished_loopstate;
+    reg subtraction_happening;
 
     always @(posedge clk) begin
         if(~resetn)	state <= 3'd0;
@@ -222,7 +219,9 @@ module montgomery(
                     // resetting
                    done <= 1'b0;
                    select_multi <= 3'd0;
-                   i <= 10'd0;
+                   i <= 11'd0;
+                   finished_loopstate <= 1'b0;
+                   subtraction_happening <= 1'b0;
                     
                    // always read input
                    regA_en <= 1'd1;
@@ -307,7 +306,7 @@ module montgomery(
     end
 
     reg incremented;
-    reg subtraction_happening;
+
 
     // State switching
     always @(posedge clk) begin
@@ -330,9 +329,9 @@ module montgomery(
                 end
             3'd2:
                 begin
-                    if(i >= 10'd1022) begin 
+                    if(i > 11'd1022) begin 
                         nextstate <= 3'd3;
-                        
+                        finished_loopstate <= 1'b1;
                     end
                     else if(loopState == 2'd0) begin
                         nextloopState <= 2'd1;
@@ -345,6 +344,7 @@ module montgomery(
                 end
             3'd3:
                 begin
+                    //done <= 1'b1; // TO BE REMOVED
                     // stop saving the result
                     if(adder_done) begin
                         // we finished 1 sub
@@ -384,12 +384,15 @@ module montgomery(
     reg ready_second ; // to delay by one the start
     reg skip_second; // to skip in the last case
     reg shifted;    // save if i shifted
+    reg [1:0] DBG_cond; // to be REMOVED
+    reg delay_state;
 
     // FSM of the loop
     always @(posedge clk) begin
         case(loopState)
             2'd0:
                 begin
+                    delay_state <= 1'b0;
                     shift_A <= 1'd0; // stop the shift
                     shift <= 1'd0;
                     ready_second <= 1'b0;
@@ -397,15 +400,17 @@ module montgomery(
                     skip_second <= 1'b0;
                     shifted <= 1'b0;
                     
-                    // data preparation
-                    if(lsb_A == 2'd1)
-                        select_multi <= 3'b100;
-                    else if(lsb_A == 2'd2)
-                        select_multi <= 3'b101;
-                    else if(lsb_A == 2'd3)
-                        select_multi <= 3'b110;
-                    else
-                        select_multi <= 3'b000;
+                    if(~finished_loopstate) begin
+                        // data preparation
+                        if(lsb_A == 2'd1)
+                            select_multi <= 3'b100;
+                        else if(lsb_A == 2'd2)
+                            select_multi <= 3'b101;
+                        else if(lsb_A == 2'd3)
+                            select_multi <= 3'b110;
+                        else
+                            select_multi <= 3'b000;
+                    end
                 end
             2'd1:
                 begin
@@ -423,22 +428,39 @@ module montgomery(
                 end
             2'd2:
                 begin
-                    if(sent == 2'd1 && ready_second == 1'b0) begin // if the second operation didn't start yet
-                        if((operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b11))
-                            select_multi <= 3'b011;
-                        else if((operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b11))
-                            select_multi <= 3'b010;
-                        else if((operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b11))
-                            select_multi <= 3'b001;
-                        else
-                            select_multi <= 3'b000; // DUMMY OPERATION TO BE REMOVED FOR BETTER PERF
-
-                        ready_second <= 1'b1;
-                    end else if(sent == 2'd1 && ready_second == 1'b1) begin
-                        start_adder <= 1'b1;
-                        sent <= 2'd2;
+                    if(delay_state) begin
+                        if(sent == 2'd1 && ready_second == 1'b0) begin // if the second operation didn't start yet
+                            if((operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b11)) begin
+                                select_multi <= 3'b011;
+                                DBG_cond <= 2'd1;
+                                end 
+                            else begin 
+                                if((operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b11)) begin
+                                    select_multi <= 3'b010;
+                                    DBG_cond <= 2'd2;
+                                    end
+                                else begin 
+                                    if((operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b11)) begin
+                                        select_multi <= 3'b001;
+                                        DBG_cond <= 2'd3;
+                                        end
+                                    else begin  
+                                        select_multi <= 3'b000; // DUMMY OPERATION TO BE REMOVED FOR BETTER PERF
+                                        DBG_cond <= 2'd0;
+                                        end
+                                end
+                            end
+    
+                            ready_second <= 1'b1;
+                        end else begin 
+                            if(sent == 2'd1 && ready_second == 1'b1) begin
+                                start_adder <= 1'b1;
+                                sent <= 2'd2;
+                            end else 
+                                start_adder <= 1'b0;
+                        end
                     end else 
-                        start_adder <= 1'b0;
+                        delay_state <=- 1'b1;
                     
                 end
             2'd3:
