@@ -39,7 +39,7 @@ module mpadder(
     reg  [1026:0] muxA_Out;
     always@(posedge clk) begin
         if (muxA_sel==1'b0) muxA_Out <= in_a;
-        else                muxA_Out <= muxA_Out >> 64;
+        else                muxA_Out <= muxA_Out >> 256;
     end
 
     assign regA_D = muxA_Out;
@@ -50,7 +50,7 @@ module mpadder(
     reg  [1026:0] muxB_Out;
     always@(posedge clk) begin
         if (muxB_sel==1'b0) muxB_Out <= in_b;
-        else                muxB_Out <= muxB_Out >> 64;
+        else                muxB_Out <= muxB_Out >> 256;
     end
 
     assign regB_D = muxB_Out;
@@ -69,10 +69,10 @@ module mpadder(
     //storing result adder in 1027-bit register
     
     reg          regResult_en;
-    reg  [1087:0] regResult;
+    reg  [1279:0] regResult;
     always @(posedge clk)
     begin
-        if(~resetn)             regResult <= 1088'b0;
+        if(~resetn)             regResult <= 1280'b0;
         else if (regResult_en) begin  
                         regResult = regResult >> 256;
                         regResult = {resultadd, regResult[1023:0]};

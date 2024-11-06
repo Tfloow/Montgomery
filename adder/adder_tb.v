@@ -104,6 +104,19 @@ module tb_mpadder;
         $display("Diff =%x", expected_results-result);
 
         #10;
+        // Test Case 5: Edge case - large numbers subtraction
+        #10 start = 1;
+            in_a = 1027'h0; // Maximum 1026-bit value
+            in_b = 1027'h33c211b567e0c0ce6610393b49e77a5fb33183f2ef3bd0c34e15369f3537c592b927242339b723be6c59d907c2cbef8d6afee9803ed39bc4fe2f7773546ed91771322659fdd65ad3402f62be5f34bbdf7ca9aa874d678a9decb13abe8b9c3badbdb709dfee20ec628be2748831cac28e1e027e33eeb69ff23499dc429d74a517; // Slightly smaller max value
+            subtract = 0; // Subtraction
+            expected_results = 1028'h33c211b567e0c0ce6610393b49e77a5fb33183f2ef3bd0c34e15369f3537c592b927242339b723be6c59d907c2cbef8d6afee9803ed39bc4fe2f7773546ed91771322659fdd65ad3402f62be5f34bbdf7ca9aa874d678a9decb13abe8b9c3badbdb709dfee20ec628be2748831cac28e1e027e33eeb69ff23499dc429d74a517;
+        #10 start = 0; // Deassert start signal
+
+        // Wait for 'done' signal to go high
+        wait (done);
+        $display("Diff =%x", expected_results-result);
+
+        #10;
 
         // Finish simulation
         $finish;

@@ -13,6 +13,9 @@ module tb_montgomery();
     reg [1024:0] expected_results;
     wire done;
 
+    wire correct;
+    assign correct = (result == expected_results);
+
     // Instantiate the montgomery module
     montgomery uut (
         .clk(clk),
@@ -42,6 +45,7 @@ module tb_montgomery();
 
         // Dump waveform data
         $dumpfile("tb_montgomery.vcd");
+        $dumpvars(1, tb_montgomery);
         $dumpvars(1, uut);
         $dumpvars(1, uut.shiftM);
         $dumpvars(1, uut.shiftB);
@@ -65,7 +69,8 @@ module tb_montgomery();
         // Wait for computation to complete
         //wait(done);
         wait(done == 1) // 1 billion time units at a 1ns timescale
-        #10
+        
+        //#1000
 
         // Display results
         $display("Result:   %h", result);
