@@ -183,10 +183,7 @@ module montgomery(
     assign lsb_A = out_shifted_A;
 
     reg [10:0] i;
-    always @(posedge clk) begin
-        if(~resetn)
-            i <= 11'd0;
-    end
+
 
     reg [1:0] loopState;
     reg [1:0] nextloopState;
@@ -219,7 +216,6 @@ module montgomery(
                     // resetting
                    done <= 1'b0;
                    select_multi <= 3'd0;
-                   i <= 11'd0;
                    finished_loopstate <= 1'b0;
                    subtraction_happening <= 1'b0;
                     
@@ -314,17 +310,18 @@ module montgomery(
         case (state)
             3'd0: 
                 begin 
+                    i <= 11'd0;
                     incremented <= 1'b0;
                     if(start == 1'd1) begin
                         nextstate <= 3'd1;
-                        state <= 3'd1;
+                        //state <= 3'd1;
                     end 
                 end
             3'd1:
                 begin
                     if(prep_done_B && prep_done_M) begin
                         nextstate <= 3'd2;
-                        state <= 3'd2;
+                        //state <= 3'd2;
                     end
                 end
             3'd2:
