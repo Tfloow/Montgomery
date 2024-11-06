@@ -372,6 +372,31 @@ module montgomery(
             4'd7:
                 begin
                     regresult_en <= 1'd1;
+                    if(adder_done) begin
+                        // we finished 1 sub
+                        if(regoutadder_D[1027] != 1'b1) begin 
+                            // another sub needed
+                            enable_shifter <= 1'b1; // save the newly calculated diff
+                            subtraction_happening <= 1'b0;
+                        end
+                    end else begin    
+                        if(~subtraction_happening) begin
+                                // run if no subtraction is actually going
+                                select_multi <= 3'b001; // select M
+                                // operand_A should also already be C
+                                subtraction_happening <= 1'b1;
+                                enable_shifter <= 1'b0; // to freeze the result
+                                subtract <= 1'b0;       // used just for a dummy register for a one pulse start_adder
+                            end else begin 
+                                subtract <= 1'b1; // activate the subtract mode
+                                // delay by one to make sure the right value is fed
+                                if(subtract <= 1'b0)
+                                    start_adder <= 1'b1;
+                                else
+                                    start_adder <= 1'b0;
+                        end
+                    end
+                    
                 end
             // Finish state
             4'd8:
@@ -406,6 +431,7 @@ module montgomery(
         case (state)
             4'd0: 
                 begin 
+                    
                     i <= 11'd0;
                     incremented <= 1'b0;
                     if(start == 1'd1) begin
@@ -465,27 +491,7 @@ module montgomery(
                         // we finished 1 sub
                         if(regoutadder_D[1027] == 1'b1) // smaller no need to update
                             nextstate <= 4'd8;
-                        else begin 
-                            enable_shifter <= 1'b1; // save the newly calculated diff
-                            subtraction_happening <= 1'b0;
-                        end
-                    end else begin
-                        if(~subtraction_happening) begin
-                            // run if no subtraction is actually going
-                            select_multi <= 3'b001; // select M
-                            // operand_A should also already be C
-                            subtraction_happening <= 1'b1;
-                            enable_shifter <= 1'b0; // to freeze the result
-                            subtract <= 1'b0;       // used just for a dummy register for a one pulse start_adder
-                        end else begin 
-                            subtract <= 1'b1; // activate the subtract mode
-                            // delay by one to make sure the right value is fed
-                            if(subtract <= 1'b0)
-                                start_adder <= 1'b1;
-                            else
-                                start_adder <= 1'b0;
-                        end
-                    end
+                    end 
                 end
             4'd8: 
                 nextstate <= 4'd0;
