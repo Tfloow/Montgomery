@@ -56,10 +56,10 @@ module mpadder(
     assign regB_D = muxB_Out;
     
     //64-bit adder
-    wire [63:0] operandA;
-    wire [63:0] operandB;
+    wire [255:0] operandA;
+    wire [255:0] operandB;
     wire        carry_in;
-    wire [63:0] resultadd;
+    wire [255:0] resultadd;
     wire        carry_out;
      reg [4:0] count;
     
@@ -74,22 +74,12 @@ module mpadder(
     begin
         if(~resetn)             regResult <= 1088'b0;
         else if (regResult_en) begin  
-                        regResult = regResult >> 64;
+                        regResult = regResult >> 256;
                         regResult = {resultadd, regResult[1023:0]};
                         //regResult <= {resultadd, regResult[1023:0] >> 64};
                         // when ran as a non blocking statement we observe unexpected behavior
         end
     end
-    
-    //DBG
-    //wire [63:0] dbg;
-    //assign dbg = result[63:0];
-    //    wire [63:0] dbg_2;
-    //assign dbg_2 = result[127:64];
-    //    wire [63:0] dbg_a;
-    //assign dbg_a = in_a[63:0];
-    //    wire [63:0] dbg_b;
-    //assign dbg_b = in_b[63:0];
     
     //Storing carry in 1-bit register
     
@@ -119,7 +109,7 @@ module mpadder(
      
      // Connecting outputs first registers to adder inputs
      assign operandA = regA_Q;
-     assign operandB = subtract ? (count == 5'd1 ? ~regB_Q[63:0] + 64'd1 : ~regB_Q[63:0] ) : regB_Q[63:0]; // disgusting but works (???)
+     assign operandB = subtract ? (count == 5'd1 ? ~regB_Q[255:0] + 256'd1 : ~regB_Q[255:0] ) : regB_Q[255:0]; // disgusting but works (???)
      assign carry_in = muxCarryIn;
      
      // Connecting output registers to one output
@@ -187,9 +177,9 @@ module mpadder(
     always @(posedge clk)
     begin
         if(state==2'd1) begin
-        count <= count + 1;
+            count <= count + 1;
         end else begin
-        count <= 5'd0;
+            count <= 5'd0;
         end
     end
         
@@ -207,7 +197,7 @@ module mpadder(
 
             2'd1   : begin
             
-                if(count >= 5'd17) begin // will repeat 16 times in the loop state 1 and last one in state 2
+                if(count >= 5'd5) begin // will repeat 16 times in the loop state 1 and last one in state 2
                     nextstate <= 2'd2;
                  end else begin
                     nextstate <= 2'd1;
@@ -228,15 +218,10 @@ module mpadder(
     reg regDone;
     always @(posedge clk)
     begin
-        if(~resetn) delayRegDone <= 1'b0;
-        else        delayRegDone <= (state==2'd2) ? 1'b1 : 1'b0;
+        if(~resetn) regDone <= 1'b0;
+        else        regDone <= (count >= 5'd5 && state == 2'd1) ? 1'b1 : 1'b0;
     end
 
-    always @(posedge clk)
-    begin 
-        if(~resetn) regDone <= 1'b0;
-        else        regDone <= delayRegDone;
-    end
 
     assign done = regDone;
 

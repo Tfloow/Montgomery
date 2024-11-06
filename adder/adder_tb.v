@@ -14,6 +14,7 @@ module tb_mpadder;
     // Outputs
     wire [1027:0] result;
     wire done;
+    wire correct;
 
     // Test values
     reg [1027:0] expected_results;
@@ -29,6 +30,8 @@ module tb_mpadder;
         .result(result),
         .done(done)
     );
+
+    assign correct = (result == expected_results);
 
     // Generate clock signal with a period of 10 time units (100 MHz frequency)
     always #5 clk = ~clk;
