@@ -39,7 +39,7 @@ module mpadder(
     reg  [1026:0] muxA_Out;
     always@(posedge clk) begin
         if (muxA_sel==1'b0) muxA_Out <= in_a;
-        else                muxA_Out <= muxA_Out >> 256;
+        else                muxA_Out <= muxA_Out >> 257;
     end
 
     assign regA_D = muxA_Out;
@@ -50,16 +50,16 @@ module mpadder(
     reg  [1026:0] muxB_Out;
     always@(posedge clk) begin
         if (muxB_sel==1'b0) muxB_Out <= in_b;
-        else                muxB_Out <= muxB_Out >> 256;
+        else                muxB_Out <= muxB_Out >> 257;
     end
 
     assign regB_D = muxB_Out;
     
     //64-bit adder
-    wire [255:0] operandA;
-    wire [255:0] operandB;
+    wire [256:0] operandA;
+    wire [256:0] operandB;
     wire        carry_in;
-    wire [255:0] resultadd;
+    wire [256:0] resultadd;
     wire        carry_out;
      reg [4:0] count;
     
@@ -69,15 +69,12 @@ module mpadder(
     //storing result adder in 1027-bit register
     
     reg          regResult_en;
-    reg  [1279:0] regResult;
+    reg  [1027:0] regResult;
     always @(posedge clk)
     begin
-        if(~resetn)             regResult <= 1280'b0;
+        if(~resetn)             regResult <= 1028'b0;
         else if (regResult_en) begin  
-                        regResult = regResult >> 256;
-                        regResult = {resultadd, regResult[1023:0]};
-                        //regResult <= {resultadd, regResult[1023:0] >> 64};
-                        // when ran as a non blocking statement we observe unexpected behavior
+            regResult <= {resultadd, regResult[1027:257]};
         end
     end
     
@@ -109,7 +106,7 @@ module mpadder(
      
      // Connecting outputs first registers to adder inputs
      assign operandA = regA_Q;
-     assign operandB = subtract ? (count == 5'd1 ? ~regB_Q[255:0] + 256'd1 : ~regB_Q[255:0] ) : regB_Q[255:0]; // disgusting but works (???)
+     assign operandB = subtract ? (count == 5'd1 ? ~regB_Q[256:0] + 257'd1 : ~regB_Q[256:0] ) : regB_Q[256:0]; // disgusting but works (???)
      assign carry_in = muxCarryIn;
      
      // Connecting output registers to one output
@@ -165,7 +162,7 @@ module mpadder(
             default: begin
                 regA_en        <= 1'b0;
                 regB_en        <= 1'b0;
-                regResult_en   <= 1'b1;
+                regResult_en   <= 1'b0;
                 regCout_en     <= 1'b0;
                 muxCarryIn_sel <= 1'b0;
                 muxA_sel       <= 1'b0;  // Select in_a for shifting
@@ -197,7 +194,7 @@ module mpadder(
 
             2'd1   : begin
             
-                if(count >= 5'd5) begin // will repeat 16 times in the loop state 1 and last one in state 2
+                if(count >= 5'd4) begin // will repeat 4 times in the loop state 1 and last one in state 2
                     nextstate <= 2'd2;
                  end else begin
                     nextstate <= 2'd1;
@@ -219,7 +216,7 @@ module mpadder(
     always @(posedge clk)
     begin
         if(~resetn) regDone <= 1'b0;
-        else        regDone <= (count >= 5'd5 && state == 2'd1) ? 1'b1 : 1'b0;
+        else        regDone <= (count >= 5'd4 && state == 2'd1) ? 1'b1 : 1'b0;
     end
 
 
