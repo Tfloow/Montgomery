@@ -75,6 +75,7 @@ module mpadder(
            
         end
     end
+    // APPARENTLY THERE IS A LATCH WHAT THE FUCK ?
     
     // keeps running maybe not the wisest thing to do
     assign {carry_out,regresultadd_D} = operandA + operandB + carry_in;
