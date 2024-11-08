@@ -7,7 +7,7 @@ module mpadder(
     input  wire          subtract,
     input  wire [1026:0] in_a,
     input  wire [1026:0] in_b,
-    output reg  [1027:0] result,
+    output wire  [1027:0] result,
     output wire          done    
     );
         reg [1:0] state, nextstate;
@@ -110,10 +110,7 @@ module mpadder(
      assign carry_in = muxCarryIn;
      
      // Connecting output registers to one output
-     always@(*)
-     begin
-        result <= regResult[1027:0];
-     end
+    assign result = {regCout, regResult};
      
      //State Machine shifting
 
