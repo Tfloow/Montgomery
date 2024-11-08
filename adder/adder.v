@@ -62,9 +62,22 @@ module mpadder(
     wire [256:0] resultadd;
     wire        carry_out;
      reg [4:0] count;
+
+     // extra register to pipeline
+    reg          regresultadd_en;   
+    wire [256:0] regresultadd_D;   // in
+    reg  [256:0] regresultadd_Q;   // out
+    always @(posedge clk)
+    begin
+        if(~resetn || state == 1'd0)         regresultadd_Q = 257'd0;
+        else if (regresultadd_en) begin
+           regresultadd_Q <= regresultadd_D;
+           
+        end
+    end
     
     // keeps running maybe not the wisest thing to do
-    assign {carry_out,resultadd} = operandA + operandB + carry_in;
+    assign {carry_out,regresultadd_D} = operandA + operandB + carry_in;
     
     //storing result adder in 1027-bit register
     
@@ -74,7 +87,7 @@ module mpadder(
     begin
         if(~resetn)             regResult <= 1028'b0;
         else if (regResult_en) begin  
-            regResult <= {resultadd, regResult[1027:257]};
+            regResult <= {regresultadd_Q, regResult[1027:257]};
         end
     end
     
@@ -133,6 +146,7 @@ module mpadder(
                 muxCarryIn_sel   <= 1'b0;
                 muxA_sel         <= 1'b0;  // Select in_a for shifting
                 muxB_sel         <= 1'b0;  // Select in_b for shifting
+                regresultadd_en  <= 1'b0;
             end
             
             // shifting stage;
@@ -144,6 +158,7 @@ module mpadder(
                 muxCarryIn_sel <= 1'b1;
                 muxA_sel       <= 1'b1;  // Select in_a for shifting
                 muxB_sel       <= 1'b1;  // Select in_b for shifting
+                regresultadd_en  <= 1'b1;
             end
             
             2'd2: begin
@@ -164,6 +179,7 @@ module mpadder(
                 muxCarryIn_sel <= 1'b0;
                 muxA_sel       <= 1'b0;  // Select in_a for shifting
                 muxB_sel       <= 1'b0;  // Select in_b for shifting
+                regresultadd_en  <= 1'b0;
             end
         endcase
     end
@@ -191,7 +207,7 @@ module mpadder(
 
             2'd1   : begin
             
-                if(count >= 5'd4) begin // will repeat 4 times in the loop state 1 and last one in state 2
+                if(count >= 5'd5) begin // will repeat 4 times in the loop state 1 and last one in state 2
                     nextstate <= 2'd2;
                  end else begin
                     nextstate <= 2'd1;
@@ -213,7 +229,7 @@ module mpadder(
     always @(posedge clk)
     begin
         if(~resetn) regDone <= 1'b0;
-        else        regDone <= (count >= 5'd4 && state == 2'd1) ? 1'b1 : 1'b0;
+        else        regDone <= (count >= 5'd5 && state == 2'd1) ? 1'b1 : 1'b0;
     end
 
 
