@@ -108,11 +108,11 @@ module montgomery(
     reg          regoutadder_en;   
     wire [1027:0] regoutadder_D;   // in
     reg  [1027:0] regoutadder_Q;   // out
-    always @(posedge clk)
-    begin
-        if(~resetn)                regoutadder_Q = 1028'd0;
-        else if (regoutadder_en)   regoutadder_Q <= regoutadder_D;
-    end
+    //always @(posedge clk)
+    //begin
+    //    if(~resetn)                regoutadder_Q = 1028'd0;
+    //    else if (regoutadder_en)   regoutadder_Q <= regoutadder_D;
+    //end
 
     // Definition of the regresult 
     reg regresult_en;
@@ -172,7 +172,7 @@ module montgomery(
     reg   enable_shifter;
     reg [1027:0] in_shift;
   
-    shift_register_two shifter(clk, regoutadder_Q, shift, resetn, enable_shifter, out_shift, shift_done);
+    shift_register_two shifter(clk, regoutadder_D, shift, resetn, enable_shifter, out_shift, shift_done);
     assign regC_D = out_shift;
     assign operand_A = regC_Q;
     assign regresult_D = out_shift;
