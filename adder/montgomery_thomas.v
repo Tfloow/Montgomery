@@ -13,7 +13,7 @@ module montgomery(
     input  [1023:0] in_b,
     input  [1023:0] in_m,
     output [1024:0] result,
-    output   reg       done
+    output   wire       done
         );
 
     // Student tasks:
@@ -207,7 +207,7 @@ module montgomery(
     reg subtraction_happening;
 
     always @(posedge clk) begin
-        if(~resetn)	state <= 3'd0;
+        if(~resetn)	state <= 4'd0;
         else        state <= nextstate;
     end
 
@@ -221,6 +221,7 @@ module montgomery(
 
     // ~~~~ FSM ~~~~
     // Enable pin
+    /*
     always @(posedge clk) begin
         case (state)
             // IDLE state
@@ -505,5 +506,398 @@ module montgomery(
         endcase
  
     end
-    
+    */
+    //FSM
+    always @(*) begin
+        case (state)
+            4'd0: begin
+                // reg stop
+                regM_en         <= 1'b0;
+                reg2M_en        <= 1'b0;
+                reg3M_en        <= 1'b0;
+
+                regB_en         <= 1'b0;
+                reg2B_en        <= 1'b0;
+                reg3B_en        <= 1'b0;
+
+                regA_en         <= 1'b0;
+                enable_A        <= 1'b0;
+
+                enable_shifter  <= 1'b0;
+
+                regresult_en    <= 1'b0;
+
+                regC_en         <= 1'b0;
+
+                // multiplexer stop
+                select_multi    <= 3'd0;
+                subtract        <= 1'b0;
+            end 
+            4'd1: begin
+                // saving the new data
+                regM_en         <= 1'b1;
+                reg2M_en        <= 1'b1;
+                reg3M_en        <= 1'b1;
+
+                regB_en         <= 1'b1;
+                reg2B_en        <= 1'b1;
+                reg3B_en        <= 1'b1;
+
+                regA_en         <= 1'b1;
+                enable_A        <= 1'b1;
+
+                enable_shifter  <= 1'b0;
+
+                regresult_en    <= 1'b0;
+
+                regC_en         <= 1'b0;
+
+                // multiplexer stop
+                select_multi    <= 3'd0;
+                subtract        <= 1'b0;
+            end 
+            4'd2: begin
+                // New data saved stop saving
+                regM_en         <= 1'b0;
+                reg2M_en        <= 1'b0;
+                reg3M_en        <= 1'b0;
+
+                regB_en         <= 1'b0;
+                reg2B_en        <= 1'b0;
+                reg3B_en        <= 1'b0;
+
+                regA_en         <= 1'b0;
+                enable_A        <= 1'b0;
+
+                enable_shifter  <= 1'b0;
+
+                regresult_en    <= 1'b0;
+
+                regC_en         <= 1'b0;
+
+                // multiplexer stop
+                select_multi    <= 3'd0;
+                subtract        <= 1'b0;
+            end 
+            4'd3: begin
+                // New data saved stop saving
+                regM_en         <= 1'b0;
+                reg2M_en        <= 1'b0;
+                reg3M_en        <= 1'b0;
+
+                regB_en         <= 1'b0;
+                reg2B_en        <= 1'b0;
+                reg3B_en        <= 1'b0;
+
+                regA_en         <= 1'b0;
+                enable_A        <= 1'b0;
+                // everything above shouldn't be changed IMO
+                enable_shifter  <= 1'b1;
+
+                regresult_en    <= 1'b1;
+
+                regC_en         <= 1'b1;
+
+                // multiplexer stop
+                select_multi    <= out_shifted_A; 
+                subtract        <= 1'b0;
+                // I redesign the seven_multiplexer to make the select_multi more handy ;))
+            end 
+            4'd4: begin // First addition C = C + out_shifted_A[1:0] * B
+                // New data saved stop saving
+                regM_en         <= 1'b0;
+                reg2M_en        <= 1'b0;
+                reg3M_en        <= 1'b0;
+
+                regB_en         <= 1'b0;
+                reg2B_en        <= 1'b0;
+                reg3B_en        <= 1'b0;
+
+                regA_en         <= 1'b0;
+                enable_A        <= 1'b0;
+                // everything above shouldn't be changed IMO
+                enable_shifter  <= 1'b1;
+
+                regresult_en    <= 1'b1;
+
+                regC_en         <= 1'b1;
+
+                // multiplexer stop
+                select_multi    <= out_shifted_A; 
+                subtract        <= 1'b0;
+                // I redesign the seven_multiplexer to make the select_multi more handy ;))
+            end  
+            4'd5: begin
+                                // New data saved stop saving
+                regM_en         <= 1'b0;
+                reg2M_en        <= 1'b0;
+                reg3M_en        <= 1'b0;
+
+                regB_en         <= 1'b0;
+                reg2B_en        <= 1'b0;
+                reg3B_en        <= 1'b0;
+
+                regA_en         <= 1'b0;
+                enable_A        <= 1'b0;
+                // everything above shouldn't be changed IMO
+                enable_shifter  <= 1'b1;
+
+                regresult_en    <= 1'b1;
+
+                regC_en         <= 1'b1;
+                subtract        <= 1'b0;
+
+                // multiplexer stop
+                if((operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b11)) begin
+                    select_multi <= 3'b110;
+                    DBG_cond <= 2'd1;
+                    end 
+                else begin 
+                    if((operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b11)) begin
+                        select_multi <= 3'b101;
+                        DBG_cond <= 2'd2;
+                        end
+                    else begin 
+                        if((operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b11)) begin
+                            select_multi <= 3'b100;
+                            DBG_cond <= 2'd3;
+                            end
+                        else begin  
+                            select_multi <= 3'b000; // DUMMY OPERATION TO BE REMOVED FOR BETTER PERF
+                            DBG_cond <= 2'd0;
+                            end
+                    end
+                end 
+            end 
+            4'd6: begin // 2 bits shift
+                // New data saved stop saving
+                regM_en         <= 1'b0;
+                reg2M_en        <= 1'b0;
+                reg3M_en        <= 1'b0;
+
+                regB_en         <= 1'b0;
+                reg2B_en        <= 1'b0;
+                reg3B_en        <= 1'b0;
+
+                regA_en         <= 1'b0;
+                enable_A        <= 1'b0;
+                // everything above shouldn't be changed IMO
+                enable_shifter  <= 1'b1;
+
+                regresult_en    <= 1'b1;
+
+                regC_en         <= 1'b1;
+
+                // multiplexer stop
+                select_multi    <= out_shifted_A;
+                subtract        <= 1'b0;
+                // I redesign the seven_multiplexer to make the select_multi more handy ;))
+            end 
+            4'd7: begin
+                                // New data saved stop saving
+                regM_en         <= 1'b0;
+                reg2M_en        <= 1'b0;
+                reg3M_en        <= 1'b0;
+
+                regB_en         <= 1'b0;
+                reg2B_en        <= 1'b0;
+                reg3B_en        <= 1'b0;
+
+                regA_en         <= 1'b0;
+                enable_A        <= 1'b0;
+                // everything above shouldn't be changed IMO
+
+                // NEED TO IMPLEMENT LOGIC WITH THE LAST BIT CHECK
+                enable_shifter  <= 1'b1;
+
+                regresult_en    <= 1'b0;
+
+                regC_en         <= 1'b1;
+
+                // multiplexer stop
+                select_multi    <= 3'b100; 
+                subtract        <= 1'b1;
+                // I redesign the seven_multiplexer to make the select_multi more handy ;))
+            end 
+            4'd8: begin
+                regM_en         <= 1'b0;
+                reg2M_en        <= 1'b0;
+                reg3M_en        <= 1'b0;
+
+                regB_en         <= 1'b0;
+                reg2B_en        <= 1'b0;
+                reg3B_en        <= 1'b0;
+
+                regA_en         <= 1'b0;
+                enable_A        <= 1'b0;
+
+                enable_shifter  <= 1'b0;
+
+                regresult_en    <= 1'b0;
+
+                regC_en         <= 1'b0;
+
+                // multiplexer stop
+                select_multi    <= 3'b0; 
+                subtract        <= 1'b0;
+            end 
+            default: begin
+                regM_en         <= 1'b0;
+                reg2M_en        <= 1'b0;
+                reg3M_en        <= 1'b0;
+
+                regB_en         <= 1'b0;
+                reg2B_en        <= 1'b0;
+                reg3B_en        <= 1'b0;
+
+                regA_en         <= 1'b0;
+                enable_A        <= 1'b0;
+
+                enable_shifter  <= 1'b0;
+
+                regresult_en    <= 1'b0;
+
+                regC_en         <= 1'b0;
+
+                // multiplexer stop
+                select_multi    <= 3'b0; 
+                subtract        <= 1'b0;
+            end 
+        endcase
+    end
+
+    reg bigger;
+
+    always @(*) begin
+        case (state)
+            4'd0: begin
+                if(start)
+                    nextstate <= 4'd1;
+                else
+                    nextstate <= 4'd0;
+            end
+            4'd1: begin
+                if(prep_done_B && prep_done_M)
+                    nextstate <= 4'd2;
+                else 
+                    nextstate <= 4'd1;
+            end
+            4'd2: begin
+                nextstate <= 4'd3;
+            end
+            4'd3: begin
+                if (i <= 1027) begin
+                    
+                    nextstate <= 4'd4;
+                end else 
+                    nextstate <= 4'd7;
+            end
+            4'd4: begin
+                if(adder_done)
+                    nextstate <= 4'd5;
+                else
+                    nextstate <= 4'd4;
+            end
+            4'd5: begin
+                if(adder_done)
+                    nextstate <= 4'd6;
+                else
+                    nextstate <= 4'd5;
+            end
+            4'd6: begin
+                if(shift_done)
+                    nextstate <= 4'd3;
+                else
+                    nextstate <= 4'd6;
+            end
+            4'd7: begin
+                if(adder_done) begin
+                    if(regoutadder_D[1027]) // negative so smaller than M
+                        nextstate <= 4'd8;
+                    else begin
+                        nextstate <= 4'd7;
+                        bigger <= 1'b1;
+                    end 
+                end else begin
+                    nextstate <= 4'd7;
+                    bigger <= 1'b0;
+                end
+            end
+            4'd8: begin
+                nextstate <= 4'd0;
+            end
+            default: begin
+                nextstate <= 4'd0;
+            end
+        endcase
+    end
+
+    reg first_add;
+    reg second_add;
+    reg shift_activate;
+    reg sub_sent;
+
+    // NEED TO EXTEND FSM WITH SOME CLOCKED SIGNAL FOR STARTING SOME ADDITION
+    always @(posedge clk) begin
+        case (state)
+            4'd3: begin 
+                i <= i + 2;
+                first_add <= 1'b0;
+                second_add <= 1'b0;
+                shift_activate <= 1'b0;
+            end
+            4'd4: begin 
+                if(~first_add) begin
+                    start_adder <= 1'b1;
+                    first_add <= 1'b1;
+                end else 
+                    start_adder <= 1'b0;
+            end 
+            4'd5: begin 
+                if(~second_add) begin
+                    start_adder <= 1'b1;
+                    second_add <= 1'b1;
+                end else 
+                    start_adder <= 1'b0;
+            end
+            4'd6: begin 
+                if(~shift_activate) begin
+                    // Like we say in french "Une pierre deux coup"
+                    shift_A <= 1'b1;
+                    shift <= 1'b1;
+                    shift_activate <= 1'b1;
+                end else begin
+                    shift_A <= 1'b0;
+                    shift <= 1'b0;
+                end
+            end
+            4'd7: begin 
+                if(~sub_sent || bigger) begin
+                    start_adder <= 1'b1;
+                    sub_sent <= 1'b1;
+                end else begin
+                    start_adder <= 1'b0;
+                end
+            end
+            default: begin
+                // Reset of the addition signals
+                i <= 10'd0; // reset counter
+                first_add <= 1'b0;
+                second_add <= 1'b0;
+                shift_activate <= 1'b0;
+                sub_sent <= 1'b0;
+            end
+        endcase
+    end
+
+    reg regDone;
+    always @(posedge clk)
+    begin
+        if(~resetn) regDone <= 1'd0;
+        else        regDone <= (state==4'd8) ? 1'b1 : 1'b0;
+    end
+
+    assign done = regDone;
+
+
 endmodule

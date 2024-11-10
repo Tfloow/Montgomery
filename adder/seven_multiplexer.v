@@ -16,12 +16,12 @@ module seven_multiplexer(
             out <= 1027'd0;
         else begin
             case (select)
-                3'b001 : out <= in_M; 
-                3'b010 : out <= in_2M; 
-                3'b011 : out <= in_3M; 
-                3'b100 : out <= in_B; 
-                3'b101 : out <= in_2B; 
-                3'b110 : out <= in_3B; 
+                3'b001 : out <= in_B;  
+                3'b010 : out <= in_2B; 
+                3'b011 : out <= in_3B; 
+                3'b100 : out <= in_M;
+                3'b101 : out <= in_2M;
+                3'b110 : out <= in_3M;
                 default: out <= 1027'd0;
             endcase
         end

@@ -68,9 +68,9 @@ module tb_montgomery();
 
         // Wait for computation to complete
         //wait(done);
-        wait(done == 1) // 1 billion time units at a 1ns timescale
+        //wait(done == 1) // 1 billion time units at a 1ns timescale
         
-        //#1000
+        #100000
 
         // Display results
         $display("Result:   %h", result);

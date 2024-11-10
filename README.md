@@ -1,6 +1,8 @@
 # Montgomery Multiplication
 
-Go to the adder folder
+Go to the [adder](/adder) folder
+
+I think the state 7 is not quite ready yet 
 
 ![montgomery](montgomery.png)
 
