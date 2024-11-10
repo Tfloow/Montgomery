@@ -20,7 +20,7 @@ module tb_mpadder;
     reg [1027:0] expected_results;
 
     // Instantiate the mpadder module
-    mpadder uut (
+    mpadder #(.ADDER_SIZE(257)) uut (
         .clk(clk),
         .resetn(resetn),
         .start(start),
@@ -36,6 +36,9 @@ module tb_mpadder;
     // Generate clock signal with a period of 10 time units (100 MHz frequency)
     always #5 clk = ~clk;
 
+        reg [4:0] test;
+
+
     // Test sequence
     initial begin
         // Initialize inputs
@@ -50,6 +53,11 @@ module tb_mpadder;
         $dumpfile("mpadder.vcd");
         $dumpvars(0, tb_mpadder);
 
+        test = 5'b10101;
+
+        $display("%d", $bits(expected_results[1027:64]));
+        $display("%b", test[4:2]);
+
         // Apply reset
         #10 resetn = 1;
 
@@ -62,7 +70,7 @@ module tb_mpadder;
         #10 start = 0; // Deassert start signal
 
         // Wait for 'done' signal to go high
-        wait (done);
+        #100
         #10;
 
         // Test Case 2: Simple subtraction of two numbers
@@ -74,7 +82,7 @@ module tb_mpadder;
         #10 start = 0; // Deassert start signal
 
         // Wait for 'done' signal to go high
-        wait (done);
+        #100
         $display("Diff =%x", expected_results-result);
 
         #10;
@@ -88,7 +96,7 @@ module tb_mpadder;
         #10 start = 0; // Deassert start signal
 
         // Wait for 'done' signal to go high
-        wait (done);
+        #100
         #10;
 
         // Test Case 4: Edge case - large numbers subtraction
@@ -100,7 +108,7 @@ module tb_mpadder;
         #10 start = 0; // Deassert start signal
 
         // Wait for 'done' signal to go high
-        wait (done);
+        #100
         $display("Diff =%x", expected_results-result);
 
         #10;
@@ -113,7 +121,7 @@ module tb_mpadder;
         #10 start = 0; // Deassert start signal
 
         // Wait for 'done' signal to go high
-        wait (done);
+        #100
         $display("Diff =%x", expected_results-result);
 
         #10;
