@@ -5,9 +5,13 @@ m = 0xe14accdd8d4576ec8485f5589055b1caca2ebf09486d8f1e7870695a5fd3754b497c7c7f85
 
 c = 0
 
-print(bin(a))
+print(f"2B   {hex(2*b)}")
+print(f"3B   {hex(3*b)}")
+print(f"2M   {hex(2*m)}")
+print(f"3M   {hex(3*m)}")
 
-for i in range(0,10,2):
+
+for i in range(0,1023,2):
     print(f"{'_':_<20} i = {i} {'_':_<20}")
     mask = 0b11 << i
     

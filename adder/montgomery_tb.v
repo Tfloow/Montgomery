@@ -47,8 +47,8 @@ module tb_montgomery();
         $dumpfile("tb_montgomery.vcd");
         $dumpvars(1, tb_montgomery);
         $dumpvars(1, uut);
-        $dumpvars(1, uut.shiftMB);
-        $dumpvars(1, uut.shiftMB.adder);
+        //$dumpvars(1, uut.shiftMB);
+        //$dumpvars(1, uut.shiftMB.adder);
         $dumpvars(1, uut.multi);
         $dumpvars(1, uut.shiftA);
         $dumpvars(1, uut.adder);
@@ -71,7 +71,7 @@ module tb_montgomery();
 
         
 
-        $finish;
+        //$finish;
 
         // Test case 1: Basic input values
         $display("Test 1");
