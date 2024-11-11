@@ -786,7 +786,7 @@ module montgomery(
                 nextstate <= 4'd3;
             end
             4'd3: begin
-                if (i <= 1025) begin
+                if (i <= 1023) begin
                     
                     nextstate <= 4'd4;
                 end else 

@@ -7,7 +7,7 @@ c = 0
 
 print(bin(a))
 
-for i in range(0,10,2):
+for i in range(0,1023,2):
     print(f"{'_':_<20} i = {i} {'_':_<20}")
     mask = 0b11 << i
     
