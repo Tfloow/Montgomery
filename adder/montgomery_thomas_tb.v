@@ -52,7 +52,7 @@ module tb_montgomery();
         $dumpvars(1, uut.multi);
         $dumpvars(1, uut.shiftA);
         $dumpvars(1, uut.adder);
-        $dumpvars(1, uut.shifter);
+        //$dumpvars(1, uut.shifter);
 
         // Apply reset
         #10 resetn = 1;  // Release reset after 10ns

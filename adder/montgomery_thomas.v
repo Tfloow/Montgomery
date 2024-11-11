@@ -164,10 +164,12 @@ module montgomery(
     reg   enable_shifter;
     reg [1027:0] in_shift;
   
-    shift_register_two shifter(clk, regoutadder_D, shift, resetn, enable_shifter, out_shift, shift_done);
+    //shift_register_two shifter(clk, regoutadder_D, shift, resetn, enable_shifter, out_shift, shift_done);
     assign operand_A = out_shift;
     assign regresult_D = out_shift;
     assign result = regresult_Q;
+    // Replace by a mux
+    assign out_shift = (shift) ? {2'b0, regoutadder_D[1027:2]} : regoutadder_D;
 
     // creating another shift_register_two for the A number
     reg shift_A;
@@ -234,6 +236,7 @@ module montgomery(
                 select_multi    <= 3'd0;
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
+                shift           <= 1'b0;
             end 
             4'd1: begin
                 // saving the new data for M
@@ -256,6 +259,7 @@ module montgomery(
                 select_multi    <= 3'd0;
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
+                shift           <= 1'b0;
             end 
             4'd2: begin
                 // Saving the data for B
@@ -278,6 +282,7 @@ module montgomery(
                 select_multi    <= 3'd0;
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b1;
+                shift           <= 1'b0;
             end 
             4'd3: begin
                 // New data saved stop saving
@@ -300,6 +305,7 @@ module montgomery(
                 select_multi    <= out_shifted_A; 
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
+                shift           <= 1'b1;
                 // I redesign the seven_multiplexer to make the select_multi more handy ;))
             end 
             4'd4: begin // First addition C = C + out_shifted_A[1:0] * B
@@ -323,6 +329,7 @@ module montgomery(
                 select_multi    <= lsb_A; 
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
+                shift           <= 1'b1;
                 // I redesign the seven_multiplexer to make the select_multi more handy ;))
             end  
             4'd5: begin
@@ -343,6 +350,7 @@ module montgomery(
 
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
+                shift           <= 1'b0;
 
                 // multiplexer stop
                 if((operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b11)) begin
@@ -387,6 +395,7 @@ module montgomery(
                 select_multi    <= out_shifted_A;
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
+                shift           <= 1'b1;
                 // I redesign the seven_multiplexer to make the select_multi more handy ;))
             end 
             4'd7: begin
@@ -412,6 +421,7 @@ module montgomery(
                 select_multi    <= 3'b100; 
                 subtract        <= 1'b1;
                 mux_m_b_sel     <= 1'b0;
+                shift           <= 1'b0;
                 // I redesign the seven_multiplexer to make the select_multi more handy ;))
             end 
             4'd8: begin
@@ -434,6 +444,7 @@ module montgomery(
                 select_multi    <= 3'b0; 
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
+                shift           <= 1'b0;
             end 
             default: begin
                 regM_en         <= 1'b0;
@@ -455,6 +466,7 @@ module montgomery(
                 select_multi    <= 3'b0; 
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
+                shift           <= 1'b0;
             end 
         endcase
     end
@@ -507,11 +519,9 @@ module montgomery(
                     nextstate <= 4'd5;
             end
             4'd6: begin
-            bigger <= 1'b0;
-                if(shift_done)
-                    nextstate <= 4'd3;
-                else
-                    nextstate <= 4'd6;
+                bigger <= 1'b0;
+                nextstate <= 4'd3;
+
             end
             4'd7: begin
                 if(adder_done) begin
@@ -568,32 +578,28 @@ module montgomery(
                     start_123data <= 1'b0;
             end
             4'd3: begin 
+                //shift_A <= 1'b0;
                 first_add <= 1'b0;
                 second_add <= 1'b0;
                 shift_activate <= 1'b0;
                 start_adder <= 1'b1;
             end
             4'd4: begin 
-                start_adder <= 1'b0;
+                start_adder <= adder_done;
             end 
             4'd5: begin 
                 if(~second_add) begin
-                    start_adder <= 1'b1;
+                    shift_A <= 1'b1; // put here too cause lsb_a is just needed for 4'd4
+                    start_adder <= 1'b0; // REMOVED
                     second_add <= 1'b1;
-                end else 
-                    start_adder <= 1'b0;
-            end
-            4'd6: begin 
-                if(~shift_activate) begin
-                    // Like we say in french "Une pierre deux coup"
-                    shift_A <= 1'b1;
-                    shift <= 1'b1;
-                    shift_activate <= 1'b1;
-                    i <= i + 2;
                 end else begin
                     shift_A <= 1'b0;
-                    shift <= 1'b0;
-                end
+                    start_adder <= 1'b0;
+                end 
+            end
+            4'd6: begin 
+                
+                i <= i + 2;
             end
             4'd7: begin 
                 if(~sub_sent || bigger) begin
