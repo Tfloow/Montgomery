@@ -150,8 +150,8 @@ module mpadder #(parameter ADDER_SIZE = 257)(
                 muxBsel <= 1'b0;
                 muxcarry_sel <= 1'b0;
 
-                regA_en <= 1'b0;
-                regB_en <= 1'b0;
+                regA_en <= 1'b1;
+                regB_en <= 1'b1;
                 regResult_en <= 1'b0;
                 regCarry_en <= 1'b0;
             end
@@ -162,8 +162,8 @@ module mpadder #(parameter ADDER_SIZE = 257)(
                 muxBsel <= 1'b0;
                 muxcarry_sel <= 1'b0;
 
-                regA_en <= 1'b0;
-                regB_en <= 1'b0;
+                regA_en <= 1'b1;
+                regB_en <= 1'b1;
                 regResult_en <= 1'b0;
                 regCarry_en <= 1'b0;
             end
@@ -185,13 +185,16 @@ module mpadder #(parameter ADDER_SIZE = 257)(
                 nextstate <= 2'd2;
             end
             2'd2 : begin 
-                if(i + 1 >= CYCLE)
+                if(i + 1 >= CYCLE) begin
                     nextstate <= 2'd3;
-                else 
+                end else 
                     nextstate <= 2'd2;
             end
-            2'd3 : begin 
-                nextstate <= 2'd0;
+            2'd3 : begin
+                if(start)
+                    nextstate <= 2'd1;
+                else
+                    nextstate <= 2'd0;
             end
             default: 
                 nextstate <= 2'd0;

@@ -273,7 +273,7 @@ module montgomery(
 
 
                 // multiplexer stop
-                select_multi    <= out_shifted_A; 
+                select_multi    <= lsb_A; 
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
                 shift           <= 1'b1;
@@ -297,10 +297,30 @@ module montgomery(
 
 
                 // multiplexer stop
-                select_multi    <= lsb_A; 
+                // multiplexer stop
+                if((operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b11)) begin
+                    select_multi <= 3'b110;
+                    DBG_cond <= 2'd1;
+                    end 
+                else begin 
+                    if((operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b11)) begin
+                        select_multi <= 3'b101;
+                        DBG_cond <= 2'd2;
+                        end
+                    else begin 
+                        if((operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b11)) begin
+                            select_multi <= 3'b100;
+                            DBG_cond <= 2'd3;
+                            end
+                        else begin  
+                            select_multi <= 3'b000; // DUMMY OPERATION TO BE REMOVED FOR BETTER PERF
+                            DBG_cond <= 2'd0;
+                            end
+                    end
+                end  
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
-                shift           <= 1'b1;
+                shift           <= 1'b0;
                 // I redesign the seven_multiplexer to make the select_multi more handy ;))
             end  
             4'd5: begin
@@ -593,6 +613,7 @@ module montgomery(
     reg sub_sent;
     reg M_sent;
     reg B_sent;
+    reg [2:0] state4_counter;
 
     // NEED TO EXTEND FSM WITH SOME CLOCKED SIGNAL FOR STARTING SOME ADDITION
     always @(posedge clk) begin
@@ -600,6 +621,8 @@ module montgomery(
             4'd0: begin
                 M_sent <= 1'b0;
                 B_sent <= 1'b0;
+                start_adder <= 1'b0;
+                state4_counter <= 3'b0;
             end
             4'd1: begin
                 if(~M_sent) begin
@@ -612,19 +635,30 @@ module montgomery(
                 if(~B_sent) begin
                     start_123data <= 1'b1;
                     B_sent <= 1'b1;
-                end else 
+                    start_adder <= 1'b0;
+                end else begin
                     start_123data <= 1'b0;
+                    if(prep_done)
+                        start_adder <= 1'b1;
+                    else
+                        start_adder <= 1'b0;
+                end
             end
             4'd3: begin 
                 //shift_A <= 1'b0;
                 first_add <= 1'b0;
                 second_add <= 1'b0;
                 shift_activate <= 1'b0;
-                start_adder <= 1'b1;
+                start_adder <= ~start_adder;
                 sub_sent <= 1'b1; // for the 3 to 7 transition
+                state4_counter <= 3'b0;
             end
             4'd4: begin 
-                start_adder <= adder_done;
+                state4_counter <= state4_counter + 1;
+                if(state4_counter == 3'b011)
+                    start_adder <= 1'b1;
+                else
+                    start_adder <= 1'b0;
             end 
             4'd5: begin 
                 if(~second_add) begin
@@ -637,7 +671,7 @@ module montgomery(
                 end 
             end
             4'd6: begin 
-                
+                start_adder <= 1'b1;
                 i <= i + 2;
             end
             4'd7: begin 

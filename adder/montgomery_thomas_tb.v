@@ -69,7 +69,9 @@ module tb_montgomery();
         resetn = 0;
         #20 resetn = 1;  // Release reset after 10ns  // Release reset after 10ns
 
-        //$finish;
+        
+
+        $finish;
 
         // Test case 1: Basic input values
         $display("Test 1");
