@@ -392,10 +392,36 @@ module montgomery(
                 select_multi    <= 3'b100; 
                 subtract        <= 1'b1;
                 mux_m_b_sel     <= 1'b0;
-                shift           <= 1'b0;
+                shift           <= 1'b1;
                 // I redesign the seven_multiplexer to make the select_multi more handy ;))
             end 
             4'd8: begin
+                // New data saved stop saving
+                regM_en         <= 1'b0;
+                reg2M_en        <= 1'b0;
+                reg3M_en        <= 1'b0;
+
+                regB_en         <= 1'b0;
+                reg2B_en        <= 1'b0;
+                reg3B_en        <= 1'b0;
+
+                enable_A        <= 1'b0;
+                // everything above shouldn't be changed IMO
+
+                // NEED TO IMPLEMENT LOGIC WITH THE LAST BIT CHECK
+                enable_shifter  <= 1'b1;
+
+                regresult_en    <= 1'b0;
+
+
+                // multiplexer stop
+                select_multi    <= 3'b100; 
+                subtract        <= 1'b1;
+                mux_m_b_sel     <= 1'b0;
+                shift           <= 1'b0;
+                // I redesign the seven_multiplexer to make the select_multi more handy ;))
+            end 
+            4'd9: begin // re add to the result
                 regM_en         <= 1'b0;
                 reg2M_en        <= 1'b0;
                 reg3M_en        <= 1'b0;
@@ -409,6 +435,28 @@ module montgomery(
                 enable_shifter  <= 1'b0;
 
                 regresult_en    <= 1'b0;
+
+
+                // multiplexer stop
+                select_multi    <= 3'b100; 
+                subtract        <= 1'b0;
+                mux_m_b_sel     <= 1'b0;
+                shift           <= 1'b0;
+            end 
+            4'd10: begin // finish
+                regM_en         <= 1'b0;
+                reg2M_en        <= 1'b0;
+                reg3M_en        <= 1'b0;
+
+                regB_en         <= 1'b0;
+                reg2B_en        <= 1'b0;
+                reg3B_en        <= 1'b0;
+
+                enable_A        <= 1'b0;
+
+                enable_shifter  <= 1'b0;
+
+                regresult_en    <= 1'b1;
 
 
                 // multiplexer stop
@@ -497,21 +545,40 @@ module montgomery(
             4'd7: begin
                 if(adder_done) begin
                     if(regoutadder_D[1027]) begin // negative so smaller than M
-                        nextstate <= 4'd8;
+                        nextstate <= 4'd9;
                         bigger <= 1'b0;
                         end
                     else begin
-                        nextstate <= 4'd7;
+                        nextstate <= 4'd8;
                         bigger <= 1'b1;
-                    end 
-                end else begin
+                    end
+                end
+                else begin
                     nextstate <= 4'd7;
                     bigger <= 1'b0;
                 end
             end
             4'd8: begin
+                if(adder_done) begin
+                    if(regoutadder_D[1027]) begin // negative so smaller than M
+                        nextstate <= 4'd9;
+                        bigger <= 1'b0;
+                        end
+                    else begin
+                        nextstate <= 4'd8;
+                        bigger <= 1'b1;
+                    end 
+                end else begin
+                    nextstate <= 4'd8;
+                    bigger <= 1'b0;
+                end
+            end
+            4'd9: begin
                 bigger <= 1'b0;
-                nextstate <= 4'd0;
+                if(adder_done)
+                    nextstate <= 4'd10;
+                else 
+                    nextstate <= 4'd9;
             end
             default: begin
             bigger <= 1'b0;
@@ -554,6 +621,7 @@ module montgomery(
                 second_add <= 1'b0;
                 shift_activate <= 1'b0;
                 start_adder <= 1'b1;
+                sub_sent <= 1'b1; // for the 3 to 7 transition
             end
             4'd4: begin 
                 start_adder <= adder_done;
@@ -573,12 +641,23 @@ module montgomery(
                 i <= i + 2;
             end
             4'd7: begin 
+                start_adder  <= 1'b0;
+                sub_sent <= 1'b0;
+            end
+            4'd8: begin 
                 if(~sub_sent || bigger) begin
                     start_adder <= 1'b1;
                     sub_sent <= 1'b1;
                 end else begin
                     start_adder <= 1'b0;
                 end
+            end
+            4'd9: begin 
+                if(~first_add) begin 
+                    start_adder <= 1'b1;
+                    first_add <= 1'b1;
+                end else
+                    start_adder <= 1'b0;
             end
             default: begin
                 // Reset of the addition signals
@@ -595,7 +674,7 @@ module montgomery(
     always @(posedge clk)
     begin
         if(~resetn) regDone <= 1'd0;
-        else        regDone <= (state==4'd8) ? 1'b1 : 1'b0;
+        else        regDone <= (state==4'd10) ? 1'b1 : 1'b0;
     end
 
     assign done = regDone;
