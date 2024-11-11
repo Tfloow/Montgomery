@@ -11,7 +11,7 @@ module seven_multiplexer(
     output reg[1026:0] out
     );
 
-    always @(posedge clk) begin
+    always @(*) begin
         if(~resetn)
             out <= 1027'd0;
         else begin

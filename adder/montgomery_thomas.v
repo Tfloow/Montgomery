@@ -592,7 +592,7 @@ module montgomery(
                 regA_en         <= 1'b0;
                 enable_A        <= 1'b0;
                 // everything above shouldn't be changed IMO
-                enable_shifter  <= 1'b1;
+                enable_shifter  <= 1'b0;
 
                 regresult_en    <= 1'b1;
 
@@ -623,7 +623,7 @@ module montgomery(
                 regC_en         <= 1'b1;
 
                 // multiplexer stop
-                select_multi    <= out_shifted_A; 
+                select_multi    <= lsb_A; 
                 subtract        <= 1'b0;
                 // I redesign the seven_multiplexer to make the select_multi more handy ;))
             end  
@@ -682,7 +682,7 @@ module montgomery(
                 regA_en         <= 1'b0;
                 enable_A        <= 1'b0;
                 // everything above shouldn't be changed IMO
-                enable_shifter  <= 1'b1;
+                enable_shifter  <= 1'b0;
 
                 regresult_en    <= 1'b1;
 
@@ -786,7 +786,7 @@ module montgomery(
                 nextstate <= 4'd3;
             end
             4'd3: begin
-                if (i <= 1027) begin
+                if (i <= 1025) begin
                     
                     nextstate <= 4'd4;
                 end else 
@@ -841,7 +841,6 @@ module montgomery(
     always @(posedge clk) begin
         case (state)
             4'd3: begin 
-                i <= i + 2;
                 first_add <= 1'b0;
                 second_add <= 1'b0;
                 shift_activate <= 1'b0;
@@ -866,6 +865,7 @@ module montgomery(
                     shift_A <= 1'b1;
                     shift <= 1'b1;
                     shift_activate <= 1'b1;
+                    i <= i + 2;
                 end else begin
                     shift_A <= 1'b0;
                     shift <= 1'b0;
