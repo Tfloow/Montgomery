@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="LjW2xJtE3a9Z_0lO8NiE" name="Page-1">
-        <mxGraphModel dx="3742" dy="2704" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="none" math="0" shadow="0">
+        <mxGraphModel dx="1601" dy="1524" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="none" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -47,6 +47,11 @@
                 <mxCell id="236" style="edgeStyle=none;html=1;entryX=0;entryY=0.4583333333333333;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="4" target="235">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
+                <mxCell id="240" value="out_3MB" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="236">
+                    <mxGeometry x="0.5671" y="-5" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
                 <mxCell id="4" value="adder" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="-380" y="690" width="80" height="70" as="geometry"/>
                 </mxCell>
@@ -78,6 +83,11 @@
                 </mxCell>
                 <mxCell id="233" style="edgeStyle=none;html=1;entryX=0;entryY=0.4583333333333333;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="6" target="232">
                     <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="239" value="out_2MB" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="233">
+                    <mxGeometry x="0.5318" y="2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="6" value="Shift Register" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="-375" y="550" width="80" height="70" as="geometry"/>
@@ -831,10 +841,20 @@
                         <mxPoint x="-610" y="420" as="sourcePoint"/>
                     </mxGeometry>
                 </mxCell>
+                <mxCell id="237" value="out_mux_m_b" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="230">
+                    <mxGeometry x="-0.8537" y="2" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="238" value="out_1MB" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="230">
+                    <mxGeometry x="0.8625" y="2" relative="1" as="geometry">
+                        <mxPoint x="-1" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
                 <mxCell id="222" value="Mux_M_B" style="shadow=0;dashed=0;align=center;html=1;strokeWidth=1;shape=mxgraph.electrical.abstract.mux2;" vertex="1" parent="1">
                     <mxGeometry x="-690" y="372" width="80" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="223" value="mux_b_m_sel" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                <mxCell id="223" value="mux_m_b_sel" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
                     <mxGeometry x="-700" y="500" width="100" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="224" value="M" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
@@ -843,19 +863,19 @@
                 <mxCell id="225" value="B" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
                     <mxGeometry x="-750" y="437" width="60" height="30" as="geometry"/>
                 </mxCell>
-                <mxCell id="228" value="mux_b_m_sel" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                <mxCell id="228" value="mux_m_b_sel" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
                     <mxGeometry x="-110" y="482" width="100" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="229" value="Demux" style="shadow=0;dashed=0;align=center;html=1;strokeWidth=1;shape=mxgraph.electrical.abstract.mux2;operation=demux;" vertex="1" parent="1">
                     <mxGeometry x="-100" y="372" width="80" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="231" value="mux_b_m_sel" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                <mxCell id="231" value="mux_m_b_sel" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
                     <mxGeometry x="-110" y="640" width="100" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="232" value="Demux" style="shadow=0;dashed=0;align=center;html=1;strokeWidth=1;shape=mxgraph.electrical.abstract.mux2;operation=demux;" vertex="1" parent="1">
                     <mxGeometry x="-100" y="530" width="80" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="234" value="mux_b_m_sel" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                <mxCell id="234" value="mux_m_b_sel" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
                     <mxGeometry x="-110" y="780" width="100" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="235" value="Demux" style="shadow=0;dashed=0;align=center;html=1;strokeWidth=1;shape=mxgraph.electrical.abstract.mux2;operation=demux;" vertex="1" parent="1">
