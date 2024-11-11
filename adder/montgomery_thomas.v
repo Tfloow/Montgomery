@@ -87,12 +87,6 @@ module montgomery(
     // Definition register regoutadder
     reg          regoutadder_en;   
     wire [1027:0] regoutadder_D;   // in
-    reg  [1027:0] regoutadder_Q;   // out
-    //always @(posedge clk)
-    //begin
-    //    if(~resetn)                regoutadder_Q = 1028'd0;
-    //    else if (regoutadder_en)   regoutadder_Q <= regoutadder_D;
-    //end
 
     // Definition of the regresult 
     reg regresult_en;
@@ -139,7 +133,6 @@ module montgomery(
     wire prep_done;
     //shift will start when start is put to 1'b1;            
     shift_add_123   shiftMB(clk, out_mux_m_b, start_123data, resetn, prep_done, out_1MB, out_2MB, out_3MB); //initializes wires adder
-    //shift_add_123   shiftB(clk, in_b, start, resetn, prep_done_B, operand_outB, operand_out2B, operand_out3B); //initializes wires adder
     
     // design the multiplexer
     reg [2:0] select_multi;
@@ -160,11 +153,8 @@ module montgomery(
     //Shifter initialization 
     reg   shift;
     wire  [1027:0] out_shift;
-    wire   shift_done;
     reg   enable_shifter;
-    reg [1027:0] in_shift;
   
-    //shift_register_two shifter(clk, regoutadder_D, shift, resetn, enable_shifter, out_shift, shift_done);
     assign operand_A = out_shift;
     assign regresult_D = out_shift;
     assign result = regresult_Q;
@@ -182,22 +172,8 @@ module montgomery(
 
     reg [10:0] i;
 
-
-    reg [1:0] loopState;
-    reg [1:0] nextloopState;
-    always @(posedge clk) begin
-        if(~resetn) begin
-            loopState <= 2'd0;
-            nextloopState <= 2'd0;
-        end
-        else
-            loopState <= nextloopState;
-    end
-
     reg [3:0] state;
     reg [3:0] nextstate;
-    reg finished_loopstate;
-    reg subtraction_happening;
 
     always @(posedge clk) begin
         if(~resetn)	state <= 4'd0;
@@ -205,12 +181,7 @@ module montgomery(
     end
 
 
-    reg[1:0] sent; // check if signal to start already sent
-    reg ready_second ; // to delay by one the start
-    reg skip_second; // to skip in the last case
-    reg shifted;    // save if i shifted
     reg [1:0] DBG_cond; // to be REMOVED
-    reg [1:0] delay_state;
 
     //FSM
     always @(*) begin
