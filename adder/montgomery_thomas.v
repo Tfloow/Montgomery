@@ -21,18 +21,6 @@ module montgomery(
     // 2. Use the Adder to implement the Montgomery multiplier in hardware.
     // 3. Use tb_montgomery.v to simulate your design.
                                                                 //Definition A and to be multiplexed registers
-    // Definition register A
-    reg          regA_en;
-    wire [1023:0] regA_D;// in
-    reg  [1023:0] regA_Q;// out
-    
-    always @(posedge clk)
-    begin
-        if(~resetn)         regA_Q = 1024'd0;
-        else if (regA_en)   regA_Q <= regA_D; //If not reset, paste input for a to register a
-    end
-    
-    assign regA_D = in_a;
     
     // Definition register B 
     reg          regB_en;   
@@ -94,15 +82,7 @@ module montgomery(
         else if (reg3M_en)   reg3M_Q <= reg3M_D;
     end
     
-                // Definition register C
-    reg          regC_en;   
-    wire [1027:0] regC_D;   // in
-    reg  [1027:0] regC_Q;   // out
-    always @(posedge clk)
-    begin
-        if(~resetn || start)         regC_Q = 1028'd0;
-        else if (regC_en)   regC_Q <= regC_D;
-    end
+
                 
     // Definition register regoutadder
     reg          regoutadder_en;   
@@ -185,8 +165,7 @@ module montgomery(
     reg [1027:0] in_shift;
   
     shift_register_two shifter(clk, regoutadder_D, shift, resetn, enable_shifter, out_shift, shift_done);
-    assign regC_D = out_shift;
-    assign operand_A = regC_Q;
+    assign operand_A = out_shift;
     assign regresult_D = out_shift;
     assign result = regresult_Q;
 
@@ -195,7 +174,7 @@ module montgomery(
     reg enable_A;
     wire [1027:0] out_shifted_A;
     wire shift_done_A;
-    shift_register_two shiftA(clk,{4'b0, regA_Q}, shift_A, resetn, enable_A, out_shifted_A, shift_done_A);
+    shift_register_two shiftA(clk,{4'b0, in_a}, shift_A, resetn, enable_A, out_shifted_A, shift_done_A);
     wire [1:0] lsb_A;
     assign lsb_A = out_shifted_A;
 
@@ -244,14 +223,12 @@ module montgomery(
                 reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
-                regA_en         <= 1'b0;
                 enable_A        <= 1'b0;
 
                 enable_shifter  <= 1'b0;
 
                 regresult_en    <= 1'b0;
 
-                regC_en         <= 1'b0;
 
                 // multiplexer stop
                 select_multi    <= 3'd0;
@@ -268,14 +245,12 @@ module montgomery(
                 reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
-                regA_en         <= 1'b1;
                 enable_A        <= 1'b1;
 
                 enable_shifter  <= 1'b0;
 
                 regresult_en    <= 1'b0;
 
-                regC_en         <= 1'b0;
 
                 // multiplexer stop
                 select_multi    <= 3'd0;
@@ -292,14 +267,12 @@ module montgomery(
                 reg2B_en        <= 1'b1;
                 reg3B_en        <= 1'b1;
 
-                regA_en         <= 1'b0;
                 enable_A        <= 1'b0;
 
                 enable_shifter  <= 1'b0;
 
                 regresult_en    <= 1'b0;
 
-                regC_en         <= 1'b0;
 
                 // multiplexer stop
                 select_multi    <= 3'd0;
@@ -316,14 +289,12 @@ module montgomery(
                 reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
-                regA_en         <= 1'b0;
                 enable_A        <= 1'b0;
                 // everything above shouldn't be changed IMO
                 enable_shifter  <= 1'b0;
 
                 regresult_en    <= 1'b1;
 
-                regC_en         <= 1'b1;
 
                 // multiplexer stop
                 select_multi    <= out_shifted_A; 
@@ -341,14 +312,12 @@ module montgomery(
                 reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
-                regA_en         <= 1'b0;
                 enable_A        <= 1'b0;
                 // everything above shouldn't be changed IMO
-                enable_shifter  <= 1'b1;
+                enable_shifter  <= 1'b0;
 
                 regresult_en    <= 1'b1;
 
-                regC_en         <= 1'b1;
 
                 // multiplexer stop
                 select_multi    <= lsb_A; 
@@ -366,14 +335,12 @@ module montgomery(
                 reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
-                regA_en         <= 1'b0;
                 enable_A        <= 1'b0;
                 // everything above shouldn't be changed IMO
                 enable_shifter  <= 1'b1;
 
                 regresult_en    <= 1'b1;
 
-                regC_en         <= 1'b1;
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
 
@@ -409,14 +376,12 @@ module montgomery(
                 reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
-                regA_en         <= 1'b0;
                 enable_A        <= 1'b0;
                 // everything above shouldn't be changed IMO
                 enable_shifter  <= 1'b0;
 
                 regresult_en    <= 1'b1;
 
-                regC_en         <= 1'b1;
 
                 // multiplexer stop
                 select_multi    <= out_shifted_A;
@@ -434,7 +399,6 @@ module montgomery(
                 reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
-                regA_en         <= 1'b0;
                 enable_A        <= 1'b0;
                 // everything above shouldn't be changed IMO
 
@@ -443,7 +407,6 @@ module montgomery(
 
                 regresult_en    <= 1'b0;
 
-                regC_en         <= 1'b1;
 
                 // multiplexer stop
                 select_multi    <= 3'b100; 
@@ -460,14 +423,12 @@ module montgomery(
                 reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
-                regA_en         <= 1'b0;
                 enable_A        <= 1'b0;
 
                 enable_shifter  <= 1'b0;
 
                 regresult_en    <= 1'b0;
 
-                regC_en         <= 1'b0;
 
                 // multiplexer stop
                 select_multi    <= 3'b0; 
@@ -483,14 +444,12 @@ module montgomery(
                 reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
-                regA_en         <= 1'b0;
                 enable_A        <= 1'b0;
 
                 enable_shifter  <= 1'b0;
 
                 regresult_en    <= 1'b0;
 
-                regC_en         <= 1'b0;
 
                 // multiplexer stop
                 select_multi    <= 3'b0; 
@@ -612,13 +571,10 @@ module montgomery(
                 first_add <= 1'b0;
                 second_add <= 1'b0;
                 shift_activate <= 1'b0;
+                start_adder <= 1'b1;
             end
             4'd4: begin 
-                if(~first_add) begin
-                    start_adder <= 1'b1;
-                    first_add <= 1'b1;
-                end else 
-                    start_adder <= 1'b0;
+                start_adder <= 1'b0;
             end 
             4'd5: begin 
                 if(~second_add) begin
