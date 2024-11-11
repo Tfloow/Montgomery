@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="shMe1NTsvN43uhFI7dK4" name="Page-1">
-        <mxGraphModel dx="1166" dy="614" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1386" dy="515" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -121,9 +121,6 @@
                 </mxCell>
                 <mxCell id="17" value="Loopstate&lt;br&gt;repeated 1024-1 by step of 2" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
                     <mxGeometry x="640" y="310" width="180" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="21" value="&lt;div style=&quot;text-align: justify;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;should also flush C&lt;/span&gt;&lt;/div&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
-                    <mxGeometry x="275" y="270" width="120" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="32" value="0" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
                     <mxGeometry x="110" y="250" width="30" height="30" as="geometry"/>
