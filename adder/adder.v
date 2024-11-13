@@ -14,9 +14,6 @@ module mpadder #(parameter ADDER_SIZE = 257)(
     //parameter ADDER_SIZE = 256;
     parameter CYCLE = (1027 + ADDER_SIZE - 1) / ADDER_SIZE;
     parameter ADDER_RES_WIDTH = CYCLE * ADDER_SIZE;
-    initial begin
-        $display("Adder Size : %d   Amount of Cycle : %d", ADDER_SIZE, CYCLE);
-    end
 
 
     // Design for the Upper branch

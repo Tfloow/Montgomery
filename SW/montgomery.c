@@ -70,8 +70,6 @@ void montMul(uint32_t *a, uint32_t *b, uint32_t *n, uint32_t *n_prime, uint32_t 
 			res[j] = S;
 		}
 
-		//loop_sum(res, n, m, size, C);
-
 		sum = (uint64_t)resSize + (uint64_t)C;
 		C = (uint32_t)(sum >> 32);
 		S = (uint32_t)(sum & 0xFFFFFFFF);

@@ -16,7 +16,7 @@ module seven_multiplexer(
 
     always @(*) begin
         if(~resetn)
-            out <= 1027'd0;
+            out <= 1027'b0;
         else begin
             case (select)
                 3'b001 : out <= in_B;  
@@ -25,7 +25,7 @@ module seven_multiplexer(
                 3'b100 : out <= in_M;
                 3'b101 : out <= in_2M;
                 3'b110 : out <= in_3M;
-                default: out <= 1027'd0;
+                default: out <= 1027'b0;
             endcase
         end
     end
@@ -54,9 +54,8 @@ module shift_register_two(
             out_shift <= 1028'b0;
             regDone = 1'b0;
         end
-        
         // writing to memory
-        if(enable) begin
+        else if(enable) begin
             current_number <= in_number;
             // already outputing 
             out_shift <= in_number;
@@ -151,6 +150,7 @@ module montgomery(
     reg          reg2B_en;   
     wire [1026:0] reg2B_D;   // in
     reg  [1026:0] reg2B_Q;   // out
+    // CHANGE TO JUST A SIMPLE BIT SHIFT
     always @(posedge clk)
     begin
         if(~resetn)         reg2B_Q = 1027'd0;
@@ -240,6 +240,7 @@ module montgomery(
     assign out_mux_m_b = (mux_m_b_sel) ? in_b : in_m;
 
     // Create the 3 Demux
+    // REMOVED THE DEMUX
     assign {operand_outB, operand_outM}   = (mux_m_b_sel) ? {out_1MB, 1024'b0} : {1024'b0, out_1MB};
     assign {operand_out2B, operand_out2M} = (mux_m_b_sel) ? {out_2MB, 1025'b0} : {1025'b0, out_2MB};
     assign {operand_out3B, operand_out3M} = (mux_m_b_sel) ? {out_3MB, 1028'b0} : {1028'b0, out_3MB};
@@ -710,6 +711,7 @@ module montgomery(
                     nextstate <= 4'd2;
             end
             4'd11: begin
+                bigger <= 1'b0;
                 nextstate <= 4'd3;
             end
             4'd3: begin
