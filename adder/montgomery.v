@@ -3,7 +3,6 @@
 
 module seven_multiplexer(
     input           clk,
-    input           resetn,
     input [1026:0]  in_M,
     input [1026:0]  in_2M,
     input [1026:0]  in_3M,
@@ -11,13 +10,13 @@ module seven_multiplexer(
     input [1026:0]  in_2B,
     input [1026:0]  in_3B,
     input [2:0]     select,
-    output reg[1026:0] out
+    output[1026:0] out
     );
 
-    always @(*) begin
-        if(~resetn)
-            out <= 1027'b0;
-        else begin
+    assign out = (select == 3'b001) ? in_B : ((select == 3'b010) ? in_2B : ((select == 3'b011) ? in_3B : (select == 3'b100) ? in_M : ((select == 3'b101) ? in_2M : ((select == 3'b110) ? in_3M : 1027'b0))));
+
+    /*always @(*) begin
+        begin
             case (select)
                 3'b001 : out <= in_B;  
                 3'b010 : out <= in_2B; 
@@ -28,7 +27,7 @@ module seven_multiplexer(
                 default: out <= 1027'b0;
             endcase
         end
-    end
+    end*/
 
 endmodule
 
