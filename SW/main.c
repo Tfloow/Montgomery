@@ -16,7 +16,7 @@
 #include "montgomery.h"
 
 void printArray(uint32_t* a, uint32_t size){
-	for(int i = 0; i < size; i++){
+	for(int i = size-1; i >= 0; i--){
 		printf("%08lx ", a[i]);
 	}
 	printf("\n\r");
@@ -246,7 +246,10 @@ uint32_t res16[32]       = { 0x11c981aa, 0x25541b1b, 0xab6324e3, 0xebae4fba, 0x3
     
     
     montMul(a16,b16,n16,n16_prime, asm_test16, 32);
-        check(res16, asm_test16, 32);
+    check(res16, asm_test16, 32);
+    printArray(res16, 32);
+    printArray(asm_test16, 32);
+    printArray(n16, 32);
 
 
 uint32_t a17[32]         = { 0xa18bbe7e, 0x2a7b9746, 0xcf2e9c64, 0x1612a46f, 0x0c614829, 0xc68bf0b8, 0x6a3db2af, 0xf3061cbf, 0xb7e7a416, 0x3772b646, 0xc873015a, 0x5f977b4c, 0x5f106322, 0x2a93a3c9, 0x61187ac2, 0xb2caea4f, 0x5fca64dc, 0x3e257b41, 0x26cca654, 0xf9e5e351, 0xf875faf9, 0x73937d9d, 0x9faaf8b2, 0x5f80f83f, 0xb1cf1d2a, 0x34e58e8e, 0xb38437a9, 0x7a28030c, 0x20cb80ba, 0xe2f47d77, 0x8271c5e8, 0x8400f562 };

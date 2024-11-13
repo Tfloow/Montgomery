@@ -110,16 +110,24 @@ void montMul(uint32_t *a, uint32_t *b, uint32_t *n, uint32_t *n_prime, uint32_t 
     check_bigger:
     bigger = 0; c = 0; i = 0;
     for(int j = 1; j <= size; j++){
-        if(res[size-1]>n[size-1]){
+        if(res[size-j]>n[size-j]){
+            // is bigger
             bigger = 1; 
             break;
+        }else if(res[size-j]!=n[size-j]){
+            // is not equal
+            break;
+        }
+        // if equal last option it will loop
+
+        if(j == size){
+            // all the numbers are equal so it is like res = 10 and n = 10
+            bigger = 1;
         }
     }
 
     // run the subtraction if needed
     if(bigger){
-        printf("BIGGER\n");
-
         for(; i < size; i++){
             if(res[i] < n[i]){
                 // be more careful
