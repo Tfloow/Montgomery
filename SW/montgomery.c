@@ -4,6 +4,8 @@
  */
 
 #include "montgomery.h"
+#include <stdio.h>
+#define DBG 1
 
 void mult32(uint32_t operandA,uint32_t operandB, uint32_t* S,uint32_t* C){
     uint16_t a_lo = operandA & 0xFFFF;        // Lower 16 bits of a
@@ -116,7 +118,7 @@ void montMul(uint32_t *a, uint32_t *b, uint32_t *n, uint32_t *n_prime, uint32_t 
 
     // run the subtraction if needed
     if(bigger){
-
+        printf("BIGGER\n");
 
         for(; i < size; i++){
             if(res[i] < n[i]){
