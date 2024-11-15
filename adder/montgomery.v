@@ -255,7 +255,7 @@ module montgomery(
     // design the multiplexer
     reg [2:0] select_multi;
     wire [1026:0] out_multi;
-    seven_multiplexer multi(clk, resetn, regM_Q, reg2M_Q, reg3M_Q, regB_Q, reg2B_Q, reg3B_Q, select_multi, out_multi);
+    seven_multiplexer multi(clk, regM_Q, reg2M_Q, reg3M_Q, regB_Q, reg2B_Q, reg3B_Q, select_multi, out_multi);
 
     //reg initialization A and B for addition
     wire  [1026:0] operand_A;   // out
