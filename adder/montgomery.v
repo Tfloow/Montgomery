@@ -15,20 +15,6 @@ module seven_multiplexer(
 
     assign out = (select == 3'b001) ? in_B : ((select == 3'b010) ? in_2B : ((select == 3'b011) ? in_3B : (select == 3'b100) ? in_M : ((select == 3'b101) ? in_2M : ((select == 3'b110) ? in_3M : 1027'b0))));
 
-    /*always @(*) begin
-        begin
-            case (select)
-                3'b001 : out <= in_B;  
-                3'b010 : out <= in_2B; 
-                3'b011 : out <= in_3B; 
-                3'b100 : out <= in_M;
-                3'b101 : out <= in_2M;
-                3'b110 : out <= in_3M;
-                default: out <= 1027'b0;
-            endcase
-        end
-    end*/
-
 endmodule
 
 module shift_register_two(
@@ -136,25 +122,13 @@ module montgomery(
                                                                 //Definition A and to be multiplexed registers
     
     // Definition register B 
-    reg          regB_en;   
-    wire [1026:0] regB_D;   // in
-    reg  [1026:0] regB_Q;   // out
-    always @(posedge clk)
-    begin
-        if(~resetn)         regB_Q = 1027'd0;
-        else if (regB_en)   regB_Q <= regB_D; //If not reset, paste input for b to register b
-    end
+    wire  [1026:0] regB_Q;   // out
+    assign regB_Q = in_b;
   
       // Definition register 2B 
-    reg          reg2B_en;   
-    wire [1026:0] reg2B_D;   // in
-    reg  [1026:0] reg2B_Q;   // out
-    // CHANGE TO JUST A SIMPLE BIT SHIFT
-    always @(posedge clk)
-    begin
-        if(~resetn)         reg2B_Q = 1027'd0;
-        else if (reg2B_en)   reg2B_Q <= reg2B_D;
-    end
+    wire  [1026:0] reg2B_Q;   // out
+    assign reg2B_Q = in_b << 1;
+
   
       // Definition register 3B 
     reg          reg3B_en;   
@@ -167,24 +141,13 @@ module montgomery(
     end
     
         // Definition register M
-    reg          regM_en;   
-    wire [1026:0] regM_D;   // in
-    reg  [1026:0] regM_Q;   // out
-    always @(posedge clk)
-    begin
-        if(~resetn)         regM_Q = 1027'd0;
-        else if (regM_en)   regM_Q <= regM_D; //If not reset, paste input for m to register b
-    end
+    wire  [1026:0] regM_Q;   // out
+    assign regM_Q = in_m;
     
             // Definition register 2M
-    reg          reg2M_en;   
-    wire [1026:0] reg2M_D;   // in
-    reg  [1026:0] reg2M_Q;   // out
-    always @(posedge clk)
-    begin
-        if(~resetn)         reg2M_Q = 1027'd0;
-        else if (reg2M_en)   reg2M_Q <= reg2M_D;
-    end
+    wire  [1026:0] reg2M_Q;   // out
+    assign reg2M_Q = in_m << 1;
+
     
             // Definition register 3M
     reg          reg3M_en;   
@@ -225,12 +188,7 @@ module montgomery(
     wire [1027:0] operand_out3B;
       
     //connecting shift_add with the registers
-    assign regM_D = {3'b0, operand_outM};
-    assign reg2M_D = {2'b0, operand_out2M};
     assign reg3M_D = operand_out3M;
-    
-    assign regB_D = {3'b0, operand_outB};
-    assign reg2B_D = {2'b0, operand_out2B};
     assign reg3B_D = operand_out3B;
 
     // Create the Mux_M_B
@@ -238,11 +196,14 @@ module montgomery(
     reg mux_m_b_sel;
     assign out_mux_m_b = (mux_m_b_sel) ? in_b : in_m;
 
-    // Create the 3 Demux
-    // REMOVED THE DEMUX
-    assign {operand_outB, operand_outM}   = (mux_m_b_sel) ? {out_1MB, 1024'b0} : {1024'b0, out_1MB};
-    assign {operand_out2B, operand_out2M} = (mux_m_b_sel) ? {out_2MB, 1025'b0} : {1025'b0, out_2MB};
-    assign {operand_out3B, operand_out3M} = (mux_m_b_sel) ? {out_3MB, 1028'b0} : {1028'b0, out_3MB};
+    assign operand_outB = out_1MB;
+    assign operand_outM = out_1MB;
+
+    assign operand_out2B = out_2MB;
+    assign operand_out2M = out_2MB;
+
+    assign operand_out3B = out_3MB;
+    assign operand_out3M = out_3MB;
     
     reg start_123data;
     wire prep_done;
@@ -314,12 +275,8 @@ module montgomery(
             4'd0: begin
                 reset_adder     <= 1'b1;
                 // reg stop
-                regM_en         <= 1'b1;
-                reg2M_en        <= 1'b1;
                 reg3M_en        <= 1'b0;
 
-                regB_en         <= 1'b1;
-                reg2B_en        <= 1'b1;
                 reg3B_en        <= 1'b0;
 
                 enable_A        <= 1'b0;
@@ -339,12 +296,8 @@ module montgomery(
             4'd1: begin
                 reset_adder     <= 1'b1;
                 // saving the new data for M
-                regM_en         <= 1'b1;
-                reg2M_en        <= 1'b1;
                 reg3M_en        <= 1'b1;
 
-                regB_en         <= 1'b0;
-                reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
                 enable_A        <= 1'b1;
@@ -364,12 +317,8 @@ module montgomery(
             4'd2: begin
                 reset_adder     <= 1'b1;
                 // Saving the data for B
-                regM_en         <= 1'b0;
-                reg2M_en        <= 1'b0;
                 reg3M_en        <= 1'b0;
 
-                regB_en         <= 1'b1;
-                reg2B_en        <= 1'b1;
                 reg3B_en        <= 1'b1;
 
                 enable_A        <= 1'b0;
@@ -389,12 +338,8 @@ module montgomery(
             4'd11: begin
                 reset_adder     <= 1'b0;
                 // New data saved stop saving
-                regM_en         <= 1'b0;
-                reg2M_en        <= 1'b0;
                 reg3M_en        <= 1'b0;
 
-                regB_en         <= 1'b0;
-                reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
                 enable_A        <= 1'b0;
@@ -415,12 +360,8 @@ module montgomery(
             4'd3: begin
                 reset_adder     <= 1'b1;
                 // New data saved stop saving
-                regM_en         <= 1'b0;
-                reg2M_en        <= 1'b0;
                 reg3M_en        <= 1'b0;
 
-                regB_en         <= 1'b0;
-                reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
                 enable_A        <= 1'b0;
@@ -441,12 +382,8 @@ module montgomery(
             4'd4: begin // First addition C = C + out_shifted_A[1:0] * B
                 reset_adder     <= 1'b1;
                 // New data saved stop saving
-                regM_en         <= 1'b0;
-                reg2M_en        <= 1'b0;
                 reg3M_en        <= 1'b0;
 
-                regB_en         <= 1'b0;
-                reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
                 enable_A        <= 1'b0;
@@ -486,12 +423,7 @@ module montgomery(
             4'd5: begin
                 reset_adder     <= 1'b1;
                 // New data saved stop saving
-                regM_en         <= 1'b0;
-                reg2M_en        <= 1'b0;
                 reg3M_en        <= 1'b0;
-
-                regB_en         <= 1'b0;
-                reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
                 enable_A        <= 1'b0;
@@ -530,12 +462,7 @@ module montgomery(
             4'd6: begin // 2 bits shift
                 reset_adder     <= 1'b1;
                 // New data saved stop saving
-                regM_en         <= 1'b0;
-                reg2M_en        <= 1'b0;
                 reg3M_en        <= 1'b0;
-
-                regB_en         <= 1'b0;
-                reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
                 enable_A        <= 1'b0;
@@ -556,12 +483,8 @@ module montgomery(
             4'd7: begin
                 reset_adder     <= 1'b1;
                                 // New data saved stop saving
-                regM_en         <= 1'b0;
-                reg2M_en        <= 1'b0;
                 reg3M_en        <= 1'b0;
 
-                regB_en         <= 1'b0;
-                reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
                 enable_A        <= 1'b0;
@@ -584,12 +507,8 @@ module montgomery(
             4'd8: begin
                 reset_adder     <= 1'b1;
                 // New data saved stop saving
-                regM_en         <= 1'b0;
-                reg2M_en        <= 1'b0;
                 reg3M_en        <= 1'b0;
 
-                regB_en         <= 1'b0;
-                reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
                 enable_A        <= 1'b0;
@@ -611,12 +530,8 @@ module montgomery(
             end 
             4'd9: begin // re add to the result
                 reset_adder     <= 1'b1;
-                regM_en         <= 1'b0;
-                reg2M_en        <= 1'b0;
                 reg3M_en        <= 1'b0;
 
-                regB_en         <= 1'b0;
-                reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
                 enable_A        <= 1'b0;
@@ -635,12 +550,8 @@ module montgomery(
             end 
             4'd10: begin // finish
                 reset_adder     <= 1'b1;
-                regM_en         <= 1'b0;
-                reg2M_en        <= 1'b0;
                 reg3M_en        <= 1'b0;
 
-                regB_en         <= 1'b0;
-                reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
                 enable_A        <= 1'b0;
@@ -659,12 +570,8 @@ module montgomery(
             end 
             default: begin
                 reset_adder     <= 1'b1;
-                regM_en         <= 1'b0;
-                reg2M_en        <= 1'b0;
                 reg3M_en        <= 1'b0;
 
-                regB_en         <= 1'b0;
-                reg2B_en        <= 1'b0;
                 reg3B_en        <= 1'b0;
 
                 enable_A        <= 1'b0;
