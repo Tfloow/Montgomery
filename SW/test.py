@@ -1,6 +1,2 @@
-res = 0x15405c72
-n =   0xc3492147
-
-print(bin(res))
-print(bin(n))
-print(res > n)
+t      = 0x1d4aaf7b2fe46ac4
+python = 0x15e3d010bd8a2ee8
