@@ -1,2 +1,5 @@
-t      = 0x1d4aaf7b2fe46ac4
-python = 0x15e3d010bd8a2ee8
+n = 0x0c3492147
+res = 0x115405c72
+
+print((res-n) < n)
+print(hex(res-n))

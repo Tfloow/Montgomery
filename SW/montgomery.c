@@ -11,6 +11,40 @@
 // a, b, n, n_prime represent operands of size elements
 // res has (size+1) elements
 
+void SUB_COND(uint32_t* u,uint32_t* n,uint32_t size, uint32_t ressize){
+	// I assume that u and n are of size size and so n[size+1] = 0
+    uint32_t B = 0;
+    uint32_t t[33] = {0}; // Set at 33 manually to avoid compiler issue
+	uint32_t sub = 0;
+    
+    for(uint32_t i = 0; i < size; i++){
+        sub = u[i] - n[i] - B;
+        if( u[i] >= n[i] + B){
+            B = 0 ;
+		}else{
+            B = 1;
+		}  
+        t[i] = sub;
+    }
+
+	// last operation to the size + 1 bits
+	sub = ressize - B;
+	if( ressize >= B){
+		B = 0 ;
+	}else{
+		B = 1;
+	}  
+	t[size] = sub;
+
+	// copy the new array in u
+    if (B == 0){
+        for(uint32_t i = 0; i < size; i++){
+			u[i] = t[i];
+		}
+    }
+	
+}
+
 void montMul(uint32_t *a, uint32_t *b, uint32_t *n, uint32_t *n_prime, uint32_t *res, uint32_t size){
 	uint32_t C;
 	uint64_t volatile sum;
@@ -82,46 +116,8 @@ void montMul(uint32_t *a, uint32_t *b, uint32_t *n, uint32_t *n_prime, uint32_t 
 		resSize = (uint64_t)resSizePlusOne + (uint64_t)C;
 	}
 
-	// subtraction conditional
-    uint8_t bigger;
-    uint64_t c;
-    uint32_t i;
+	SUB_COND(res, n, size, resSize);
 
-    // check if bigger
-    check_bigger:
-    bigger = 0; c = 0; i = 0;
-    for(uint32_t j = 1; j <= size; j++){
-        if(res[size-j]>n[size-j]){
-            // is bigger
-            bigger = 1; 
-            break;
-        }else if(res[size-j]!=n[size-j]){
-            // is not equal
-            break;
-        }
-        // if equal last option it will loop
-
-        if(j == size){
-            // all the numbers are equal so it is like res = 10 and n = 10
-            bigger = 1;
-        }
-    }
-
-    // run the subtraction if needed
-    if(bigger){
-		printf("COND SUB\n");
-        for(; i < size; i++){
-            if(res[i] < n[i]){
-                // be more careful
-                res[i] = (uint32_t)(UINT32_MAX + 1 + ((uint64_t) res[i]) - (((uint64_t)n[i]) + c));
-                c = 1;
-            }else{
-                res[i] = res[i] - (n[i] + c);
-                c = 0;
-            }
-        }
-
-        goto check_bigger;
-    }
+	return;
 
 }
