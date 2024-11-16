@@ -115,22 +115,12 @@ module montgomery(
     output   wire       done
         );
 
-    // Student tasks:
-    // 1. Instantiate an Adder
-    // 2. Use the Adder to implement the Montgomery multiplier in hardware.
-    // 3. Use tb_montgomery.v to simulate your design.
-                                                                //Definition A and to be multiplexed registers
-    
-    // Definition register B 
-    wire  [1026:0] regB_Q;   // out
-    assign regB_Q = in_b;
-  
-      // Definition register 2B 
+    // Definition register 2B 
     wire  [1026:0] reg2B_Q;   // out
     assign reg2B_Q = in_b << 1;
 
   
-      // Definition register 3B 
+    // Definition register 3B 
     reg          reg3B_en;   
     wire [1026:0] reg3B_D;   // in
     reg  [1026:0] reg3B_Q;   // out
@@ -138,18 +128,14 @@ module montgomery(
     begin
         if(~resetn)         reg3B_Q = 1027'd0;
         else if (reg3B_en)   reg3B_Q <= reg3B_D;
-    end
+    end    
     
-        // Definition register M
-    wire  [1026:0] regM_Q;   // out
-    assign regM_Q = in_m;
-    
-            // Definition register 2M
+    // Definition register 2M
     wire  [1026:0] reg2M_Q;   // out
     assign reg2M_Q = in_m << 1;
 
     
-            // Definition register 3M
+    // Definition register 3M
     reg          reg3M_en;   
     wire [1026:0] reg3M_D;   // in
     reg  [1026:0] reg3M_Q;   // out
@@ -162,7 +148,6 @@ module montgomery(
 
                 
     // Definition register regoutadder
-    reg          regoutadder_en;   
     wire [1027:0] regoutadder_D;   // in
 
     // Definition of the regresult 
@@ -216,7 +201,7 @@ module montgomery(
     // design the multiplexer
     reg [2:0] select_multi;
     wire [1026:0] out_multi;
-    seven_multiplexer multi(clk, regM_Q, reg2M_Q, reg3M_Q, regB_Q, reg2B_Q, reg3B_Q, select_multi, out_multi);
+    seven_multiplexer multi(clk, {3'b0, in_m}, reg2M_Q, reg3M_Q, {3'b0, in_b}, reg2B_Q, reg3B_Q, select_multi, out_multi);
 
     //reg initialization A and B for addition
     wire  [1026:0] operand_A;   // out
@@ -292,6 +277,7 @@ module montgomery(
                 mux_m_b_sel     <= 1'b0;
                 shift           <= 1'b0;
                 loop_sel        <= 1'b0;
+                shift_A         <= 1'b0;
             end 
             4'd1: begin
                 reset_adder     <= 1'b1;
@@ -313,6 +299,7 @@ module montgomery(
                 mux_m_b_sel     <= 1'b0;
                 shift           <= 1'b0;
                 loop_sel        <= 1'b0;
+                shift_A         <= 1'b0;
             end 
             4'd2: begin
                 reset_adder     <= 1'b1;
@@ -334,6 +321,7 @@ module montgomery(
                 mux_m_b_sel     <= 1'b1;
                 shift           <= 1'b0;
                 loop_sel        <= 1'b0;
+                shift_A         <= 1'b0;
             end 
             4'd11: begin
                 reset_adder     <= 1'b0;
@@ -355,6 +343,7 @@ module montgomery(
                 mux_m_b_sel     <= 1'b0;
                 shift           <= 1'b1;
                 loop_sel        <= 1'b1;
+                shift_A         <= 1'b0;
                 // I redesign the seven_multiplexer to make the select_multi more handy ;))
             end
             4'd3: begin
@@ -377,6 +366,7 @@ module montgomery(
                 mux_m_b_sel     <= 1'b0;
                 shift           <= 1'b1;
                 loop_sel        <= 1'b1;
+                shift_A         <= 1'b0;
                 // I redesign the seven_multiplexer to make the select_multi more handy ;))
             end 
             4'd4: begin // First addition C = C + out_shifted_A[1:0] * B
@@ -391,34 +381,15 @@ module montgomery(
                 enable_shifter  <= 1'b0;
 
                 regresult_en    <= 1'b1;
-                loop_sel        <= 1'b1;
+
 
                 // multiplexer stop
-                // multiplexer stop
-                if((operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b11)) begin
-                    select_multi <= 3'b110;
-                    DBG_cond <= 2'd1;
-                    end 
-                else begin 
-                    if((operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b11)) begin
-                        select_multi <= 3'b101;
-                        DBG_cond <= 2'd2;
-                        end
-                    else begin 
-                        if((operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b11)) begin
-                            select_multi <= 3'b100;
-                            DBG_cond <= 2'd3;
-                            end
-                        else begin  
-                            select_multi <= 3'b000; // DUMMY OPERATION TO BE REMOVED FOR BETTER PERF
-                            DBG_cond <= 2'd0;
-                            end
-                    end
-                end  
+                select_multi    <= lsb_A; 
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
-                shift           <= 1'b0;
-                // I redesign the seven_multiplexer to make the select_multi more handy ;))
+                shift           <= 1'b1;
+                loop_sel        <= 1'b1;
+                shift_A         <= 1'b0;
             end  
             4'd5: begin
                 reset_adder     <= 1'b1;
@@ -436,19 +407,20 @@ module montgomery(
                 mux_m_b_sel     <= 1'b0;
                 shift           <= 1'b0;
                 loop_sel        <= 1'b1;
+                shift_A         <= 1'b1;
 
                 // multiplexer stop
-                if((operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b11)) begin
+                if((operand_A[1:0] == 2'b01 && in_m[1:0] == 2'b01) || (operand_A[1:0] == 2'b11 && in_m[1:0] == 2'b11)) begin
                     select_multi <= 3'b110;
                     DBG_cond <= 2'd1;
                     end 
                 else begin 
-                    if((operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b10 && regM_Q[1:0] == 2'b11)) begin
+                    if((operand_A[1:0] == 2'b10 && in_m[1:0] == 2'b01) || (operand_A[1:0] == 2'b10 && in_m[1:0] == 2'b11)) begin
                         select_multi <= 3'b101;
                         DBG_cond <= 2'd2;
                         end
                     else begin 
-                        if((operand_A[1:0] == 2'b11 && regM_Q[1:0] == 2'b01) || (operand_A[1:0] == 2'b01 && regM_Q[1:0] == 2'b11)) begin
+                        if((operand_A[1:0] == 2'b11 && in_m[1:0] == 2'b01) || (operand_A[1:0] == 2'b01 && in_m[1:0] == 2'b11)) begin
                             select_multi <= 3'b100;
                             DBG_cond <= 2'd3;
                             end
@@ -459,7 +431,7 @@ module montgomery(
                     end
                 end 
             end 
-            4'd6: begin // 2 bits shift
+            4'd6: begin 
                 reset_adder     <= 1'b1;
                 // New data saved stop saving
                 reg3M_en        <= 1'b0;
@@ -467,18 +439,37 @@ module montgomery(
 
                 enable_A        <= 1'b0;
                 // everything above shouldn't be changed IMO
-                enable_shifter  <= 1'b0;
+                enable_shifter  <= 1'b1;
 
                 regresult_en    <= 1'b1;
 
-
-                // multiplexer stop
-                select_multi    <= out_shifted_A;
                 subtract        <= 1'b0;
                 mux_m_b_sel     <= 1'b0;
-                shift           <= 1'b1;
+                shift           <= 1'b0;
                 loop_sel        <= 1'b1;
-                // I redesign the seven_multiplexer to make the select_multi more handy ;))
+                shift_A         <= 1'b0;
+
+                // multiplexer stop
+                if((operand_A[1:0] == 2'b01 && in_m[1:0] == 2'b01) || (operand_A[1:0] == 2'b11 && in_m[1:0] == 2'b11)) begin
+                    select_multi <= 3'b110;
+                    DBG_cond <= 2'd1;
+                    end 
+                else begin 
+                    if((operand_A[1:0] == 2'b10 && in_m[1:0] == 2'b01) || (operand_A[1:0] == 2'b10 && in_m[1:0] == 2'b11)) begin
+                        select_multi <= 3'b101;
+                        DBG_cond <= 2'd2;
+                        end
+                    else begin 
+                        if((operand_A[1:0] == 2'b11 && in_m[1:0] == 2'b01) || (operand_A[1:0] == 2'b01 && in_m[1:0] == 2'b11)) begin
+                            select_multi <= 3'b100;
+                            DBG_cond <= 2'd3;
+                            end
+                        else begin  
+                            select_multi <= 3'b000; // DUMMY OPERATION TO BE REMOVED FOR BETTER PERF
+                            DBG_cond <= 2'd0;
+                            end
+                    end
+                end 
             end 
             4'd7: begin
                 reset_adder     <= 1'b1;
@@ -502,6 +493,7 @@ module montgomery(
                 mux_m_b_sel     <= 1'b0;
                 shift           <= 1'b1;
                 loop_sel        <= 1'b1;
+                shift_A         <= 1'b0;
                 // I redesign the seven_multiplexer to make the select_multi more handy ;))
             end 
             4'd8: begin
@@ -526,6 +518,7 @@ module montgomery(
                 mux_m_b_sel     <= 1'b0;
                 shift           <= 1'b0;
                 loop_sel        <= 1'b1;
+                shift_A         <= 1'b0;
                 // I redesign the seven_multiplexer to make the select_multi more handy ;))
             end 
             4'd9: begin // re add to the result
@@ -547,6 +540,7 @@ module montgomery(
                 mux_m_b_sel     <= 1'b0;
                 shift           <= 1'b0;
                 loop_sel        <= 1'b1;
+                shift_A         <= 1'b0;
             end 
             4'd10: begin // finish
                 reset_adder     <= 1'b1;
@@ -567,6 +561,7 @@ module montgomery(
                 mux_m_b_sel     <= 1'b0;
                 shift           <= 1'b0;
                 loop_sel        <= 1'b1;
+                shift_A         <= 1'b0;
             end 
             default: begin
                 reset_adder     <= 1'b1;
@@ -587,11 +582,14 @@ module montgomery(
                 mux_m_b_sel     <= 1'b0;
                 shift           <= 1'b0;
                 loop_sel        <= 1'b1;
+                shift_A         <= 1'b0;
             end 
         endcase
     end
 
     reg bigger;
+    reg [2:0] state4_counter;
+    reg [2:0] state6_counter;
 
     always @(*) begin
         case (state)
@@ -630,21 +628,21 @@ module montgomery(
             end
             4'd4: begin
             bigger <= 1'b0;
-                if(adder_done)
+                if(state4_counter >= 3'd3)
                     nextstate <= 4'd5;
                 else
                     nextstate <= 4'd4;
             end
             4'd5: begin
-            bigger <= 1'b0;
-                if(adder_done)
-                    nextstate <= 4'd6;
-                else
-                    nextstate <= 4'd5;
+                bigger <= 1'b0;
+                nextstate <= 4'd6;
             end
             4'd6: begin
                 bigger <= 1'b0;
-                nextstate <= 4'd3;
+                if(state6_counter >= 3'd3)
+                    nextstate <= 4'd3;
+                else
+                    nextstate <= 4'd6;
 
             end
             4'd7: begin
@@ -698,7 +696,7 @@ module montgomery(
     reg sub_sent;
     reg M_sent;
     reg B_sent;
-    reg [2:0] state4_counter;
+    
 
     // NEED TO EXTEND FSM WITH SOME CLOCKED SIGNAL FOR STARTING SOME ADDITION
     always @(posedge clk) begin
@@ -707,7 +705,6 @@ module montgomery(
                 M_sent <= 1'b0;
                 B_sent <= 1'b0;
                 start_adder <= 1'b0;
-                state4_counter <= 3'b0;
             end
             4'd1: begin
                 if(~M_sent) begin
@@ -726,38 +723,26 @@ module montgomery(
                 end
             end
             4'd11: begin 
-                start_adder <= 1'b1;
+                start_adder <= 1'b0;
             end
             4'd3: begin 
-                //shift_A <= 1'b0;
-                first_add <= 1'b0;
-                second_add <= 1'b0;
-                shift_activate <= 1'b0;
-                start_adder <= ~start_adder;
-                sub_sent <= 1'b1; // for the 3 to 7 transition
-                state4_counter <= 3'b0;
-            end
-            4'd4: begin 
-                state4_counter <= state4_counter + 1;
-                if(state4_counter == 3'b011)
-                    start_adder <= 1'b1;
-                else
-                    start_adder <= 1'b0;
-            end 
-            4'd5: begin 
-                if(~second_add) begin
-                    shift_A <= 1'b1; // put here too cause lsb_a is just needed for 4'd4
-                    start_adder <= 1'b0; // REMOVED
-                    second_add <= 1'b1;
-                end else begin
-                    shift_A <= 1'b0;
-                    start_adder <= 1'b0;
-                end 
-            end
-            4'd6: begin 
                 start_adder <= 1'b1;
                 i <= i + 2;
+                state4_counter <= 3'b0;
+                state6_counter <= 3'b0;
             end
+            4'd4: begin
+                start_adder <= 1'b0;
+                state4_counter <= state4_counter + 1;
+            end
+            4'd5: begin
+                start_adder <= 1'b1;
+            end
+            4'd6: begin
+                start_adder <= 1'b0;
+                state6_counter <= state6_counter + 1;
+            end
+
             4'd7: begin 
                 start_adder  <= 1'b0;
                 sub_sent <= 1'b0;

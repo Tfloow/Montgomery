@@ -71,7 +71,7 @@ module tb_montgomery();
 
         
 
-        //$finish;
+        $finish;
 
         // Test case 1: Basic input values
         $display("Test 1");
