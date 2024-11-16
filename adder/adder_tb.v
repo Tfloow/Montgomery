@@ -20,7 +20,7 @@ module tb_mpadder;
     reg [1027:0] expected_results;
 
     // Instantiate the mpadder module
-    mpadder #(.ADDER_SIZE(257)) uut (
+    mpadder #(.ADDER_SIZE(514)) uut (
         .clk(clk),
         .resetn(resetn),
         .start(start),
@@ -60,6 +60,8 @@ module tb_mpadder;
 
         // Apply reset
         #10 resetn = 1;
+
+        #5
 
         // Test Case 1: Simple addition of two numbers
         #10 start = 1;

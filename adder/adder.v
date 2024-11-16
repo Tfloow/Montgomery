@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module mpadder #(parameter ADDER_SIZE = 257)(
+module mpadder #(parameter ADDER_SIZE = 514)(
     input  wire          clk,
     input  wire          resetn,
     input  wire          start,

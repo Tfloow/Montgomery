@@ -628,7 +628,7 @@ module montgomery(
             end
             4'd4: begin
             bigger <= 1'b0;
-                if(state4_counter >= 3'd3)
+                if(state4_counter >= 3'd1)
                     nextstate <= 4'd5;
                 else
                     nextstate <= 4'd4;
@@ -639,7 +639,7 @@ module montgomery(
             end
             4'd6: begin
                 bigger <= 1'b0;
-                if(state6_counter >= 3'd3)
+                if(state6_counter >= 3'd1)
                     nextstate <= 4'd3;
                 else
                     nextstate <= 4'd6;
