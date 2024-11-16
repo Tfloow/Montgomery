@@ -46,28 +46,39 @@ if operation == 0:
 #####################################################
 
 if operation == 1:
-  print ("Test Vector for Multi Precision Adder\n")
+  print ('#10 start = 1;')
 
   A = helpers.getRandomInt(1027)
   B = helpers.getRandomInt(1027)
   C = HW.MultiPrecisionAddSub_1027(A,B,"add")
 
-  print ("A                = ", hex(A))           # 1027-bits
-  print ("B                = ", hex(B))           # 1027-bits
-  print ("A + B            = ", hex(C))           # 1028-bits
-
+  print ("in_a = 1027'", hex(A), ";")           # 1027-bits
+  print ("in_b = 1027'", hex(B), ";")           # 1027-bits
+  print("subtract = 0;")
+  print ("expected_results = 1028'", hex(C), ";")           # 1028-bits
+  
+  print("#10 start = 0;")
+  print(r'#100')
+  print(r'$display("Diff =%x", expected_results-result);')
+  print("#10")
 #####################################################
 
 if operation == 2:
-  print ("Test Vector for Multi Precision Subtractor\n")
+  print ('#10 start = 1;')
 
   A = helpers.getRandomInt(1027)
   B = helpers.getRandomInt(1027)
   C = HW.MultiPrecisionAddSub_1027(A,B,"subtract")
 
-  print ("A                = ", hex(A))           # 1027-bits
-  print ("B                = ", hex(B))           # 1027-bits
-  print ("A - B            = ", hex(C))           # 1028-bits
+  print ("in_a = 1027'", hex(A), ";")           # 1027-bits
+  print ("in_b = 1027'", hex(B), ";")           # 1027-bits
+  print("subtract = 1;")
+  print ("expected_results = 1028'", hex(C), ";")           # 1028-bits
+  
+  print("#10 start = 0;")
+  print(r'#100')
+  print(r'$display("Diff =%x", expected_results-result);')
+  print("#10")
 
 #####################################################
 
