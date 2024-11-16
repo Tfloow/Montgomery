@@ -17,6 +17,40 @@ module seven_multiplexer(
 
 endmodule
 
+module seven_multiplexer_reg(
+    input           clk,
+    input [1026:0]  in_M,
+    input [1026:0]  in_2M,
+    input [1026:0]  in_3M,
+    input [1026:0]  in_B,
+    input [1026:0]  in_2B,
+    input [1026:0]  in_3B,
+    input [2:0]     select,
+    output reg [1026:0] out
+    );
+    // I don't mind having more FF used than LUTs as FF are cheaper on the xilinx than LUTs
+
+    always @(select) begin
+        case(select)
+            3'b001:
+                out = in_B;
+            3'b010:
+                out = in_2B;
+            3'b011:
+                out = in_3B;
+            3'b100:
+                out = in_M;
+            3'b101:
+                out = in_2M;
+            3'b110:
+                out = in_3M;
+            default:
+                out = 1028'b0;
+        endcase
+    end
+
+endmodule
+
 module shift_register_two(
     input           clk,
     input [1027:0]  in_number,
@@ -201,7 +235,7 @@ module montgomery(
     // design the multiplexer
     reg [2:0] select_multi;
     wire [1026:0] out_multi;
-    seven_multiplexer multi(clk, {3'b0, in_m}, reg2M_Q, reg3M_Q, {3'b0, in_b}, reg2B_Q, reg3B_Q, select_multi, out_multi);
+    seven_multiplexer_reg multi(clk, {3'b0, in_m}, reg2M_Q, reg3M_Q, {3'b0, in_b}, reg2B_Q, reg3B_Q, select_multi, out_multi);
 
     //reg initialization A and B for addition
     wire  [1026:0] operand_A;   // out
