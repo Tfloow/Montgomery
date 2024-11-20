@@ -161,6 +161,7 @@ if operation == 5:
   # Encrypt
   Ct = SW.MontExp(M, e, N)                        # 1024-bit exponentiation
   print ("Ciphertext   = ", hex(Ct))              # 1024-bits
+  print("{ ", helpers.WriteConstants(Ct,32), " }")
 
   # Decrypt
   Pt = SW.MontExp(Ct, d, N)                       # 1024-bit exponentiation

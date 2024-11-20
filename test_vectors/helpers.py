@@ -143,7 +143,7 @@ def WriteConstants(number, size):
     # print (out)
 
 def CreateConstants(seed, N, e, d, M):
-    target = open("../sw_project/src/sw/testvector.c", 'w')
+    target = open("testvector.c", 'w')
     target.truncate()
 
     # extern uint32_t N[32],
