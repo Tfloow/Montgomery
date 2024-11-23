@@ -29,6 +29,9 @@ module rsa (
   assign command        = rin0; // use rin0 as command
   assign dma_rx_address = rin1; // use rin1 as input  data address
   assign dma_tx_address = rin2; // use rin2 as output data address
+  assign t = rin3;
+  assign t_len = rin4;
+  assign loading_data = rin5;
 
   // Only one output register is used. It will the status of FPGA's execution.
   wire [31:0] status;
@@ -40,8 +43,11 @@ module rsa (
   assign rout5 = 32'b0;  // not used
   assign rout6 = 32'b0;  // not used
   assign rout7 = 32'b0;  // not used
+  
+  
+  // doing the loading process
 
-
+    /*
   // In this example we have only one computation command.
   wire isCmdComp = (command == 32'd1);
   wire isCmdIdle = (command == 32'd0);
@@ -135,7 +141,7 @@ module rsa (
   always@(posedge clk)
     case (state)
       STATE_RX_WAIT : r_data <= (dma_done) ? dma_rx_data : r_data;
-      STATE_COMPUTE : r_data <= {32'hDEADBEEF, r_data[991:0]};
+      STATE_COMPUTE : r_data <= {32'h0BADCAFE, r_data[991:0]};
     endcase
   assign dma_tx_data = r_data;
 
@@ -144,5 +150,5 @@ module rsa (
   wire isStateIdle = (state == STATE_IDLE);
   wire isStateDone = (state == STATE_DONE);
   assign status = {29'b0, dma_error, isStateIdle, isStateDone};
-
+    */
 endmodule

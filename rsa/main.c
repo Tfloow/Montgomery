@@ -34,8 +34,9 @@ int main() {
   #define COMMAND 0
   #define RXADDR  1
   #define TXADDR  2
-  #define T_LEN   3
-  #define LOADING 4
+  #define T       3
+  #define T_LEN   4
+  #define LOADING 5
   #define STATUS  0
 
   // Aligned input and output memory shared with FPGA
@@ -124,8 +125,8 @@ int main() {
 
     // Data loading
     // Proposed CSR for command : use 8 bits : 0bxxxx x used xxx used for number fed
-    uint32_t adress_list[4] = {N,e,R_N,R2_N};
-    for(uint8_t i = 1; i <= 4; i++){
+    uint32_t adress_list[3] = {N,R_N,R2_N};
+    for(uint8_t i = 1; i <= 3; i++){
         HWreg[RXADDR] = adress_list[i-1]; // store address idata in reg1
         HWreg[LOADING] = 8 + i; // 0b1000 + i indicating the state and which datas are being loaded.
 
@@ -136,7 +137,8 @@ int main() {
     HWreg[LOADING] = 0;
     HWreg[RXADDR]  = M;
 
-    // saves the length of t
+    // saves the length of exponent
+    HWreg[T]     = e[0];
     HWreg[T_LEN] = 16;
 
     // Running the montgomery Exponentiation
