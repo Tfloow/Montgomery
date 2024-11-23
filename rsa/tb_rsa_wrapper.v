@@ -205,46 +205,53 @@ module tb_rsa_wrapper();
 
     // do the data loading part
     
-    // first write
+    // first write WATCH OUT THE ORDER IS IMPORTANT
     reg_write(RXADDR, N1_ADDR);
     reg_write(LOADING, 32'b1001);
     
     // Poll Done Signal
     reg_read(COMMAND, reg_status);
-    while (reg_status[9]==1'b0) // check 10th bit status status
+    while (reg_status[0]==1'b0) 
     begin
       #`LONG_WAIT;
       reg_read(COMMAND, reg_status);
     end
+    $display("Sent N");
+    reg_write(LOADING, 32'b0);
     
-    reg_write(RXADDR, N1_ADDR);
+    reg_write(RXADDR, R_N1_ADDR);
     reg_write(LOADING, 32'b1010);
     
     // Poll Done Signal
     reg_read(COMMAND, reg_status);
-    while (reg_status[9]==1'b0) // check 10th bit status status
+    while (reg_status[0]==1'b0) 
     begin
       #`LONG_WAIT;
       reg_read(COMMAND, reg_status);
     end
+    $display("Sent R_N");
+    reg_write(LOADING, 32'b0);
     
-    reg_write(RXADDR, N1_ADDR);
+    reg_write(RXADDR, R2_N1_ADDR);
     reg_write(LOADING, 32'b1011);
     
     // Poll Done Signal
     reg_read(COMMAND, reg_status);
-    while (reg_status[9]==1'b0) // check 10th bit status status
+    while (reg_status[0]==1'b0)
     begin
       #`LONG_WAIT;
       reg_read(COMMAND, reg_status);
     end
+    $display("Sent R2_N");
+    
     /// loading finished
+    reg_write(LOADING, 32'b0);
     
     // preparing the rest of the data
     reg_write(RXADDR, M1_ADDR);
     reg_write(T, 32'h00009985);
     reg_write(T_LEN, 32'd16);
-            
+    // ALWAYS LOAD DATA BEFORE SENDING ANY COMMAND OR MAY CAUSE BUGS
 
     // Starting RSA
     reg_write(COMMAND, 32'h00000001);

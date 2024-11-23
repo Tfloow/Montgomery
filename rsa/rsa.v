@@ -26,6 +26,9 @@ module rsa (
   // The first one is used for giving a command to FPGA.
   // The others are for setting DMA input and output data addresses.
   wire [31:0] command;
+  wire [31:0] t;
+  wire [31:0] t_len;
+  wire [31:0] loading_data;
   assign command        = rin0; // use rin0 as command
   assign dma_rx_address = rin1; // use rin1 as input  data address
   assign dma_tx_address = rin2; // use rin2 as output data address
@@ -44,29 +47,82 @@ module rsa (
   assign rout6 = 32'b0;  // not used
   assign rout7 = 32'b0;  // not used
   
-  
-  // doing the loading process
-
-    /*
-  // In this example we have only one computation command.
-  wire isCmdComp = (command == 32'd1);
-  wire isCmdIdle = (command == 32'd0);
-
-
-  // Define state machine's states
+    // define status
   localparam
-    STATE_IDLE     = 3'd0,
-    STATE_RX       = 3'd1,
-    STATE_RX_WAIT  = 3'd2,
-    STATE_COMPUTE  = 3'd3,
-    STATE_TX       = 3'd4,
-    STATE_TX_WAIT  = 3'd5,
-    STATE_DONE     = 3'd6;
-
+    STATE_IDLE     = 4'd0,
+    STATE_RX       = 4'd1,
+    STATE_RX_WAIT  = 4'd2,
+    STATE_SAVE     = 4'd7,
+    STATE_COMPUTE  = 4'd3,
+    STATE_TX       = 4'd4,
+    STATE_TX_WAIT  = 4'd5,
+    STATE_DONE     = 4'd6;
+    
   // The state machine
   reg [2:0] state = STATE_IDLE;
   reg [2:0] next_state;
+  
+  //// LOADING PART
+  
+    wire N_en;
+    wire R_N_en;
+    wire R2_N_en;
+    wire [1023:0] save_input;
+  
+    // registers definition
+    // N
+    reg [1023:0] N_Q;
+    always @(posedge clk) begin
+        if(N_en)
+            N_Q <= save_input;
+    end
+    
+    // R_N
+    reg [1023:0] R_N_Q;
+    always @(posedge clk) begin
+        if(R_N_en)
+            R_N_Q <= save_input;
+    end
+    
+    // R2_N
+    reg [1023:0] R2_N_Q;
+    always @(posedge clk) begin
+        if(R2_N_en)
+            R2_N_Q <= save_input;
+    end
+    
+    // control the enabled pin through loading command
+    assign N_en    = (loading_data[2:0] == 3'b001 && state != STATE_DONE && state != STATE_SAVE);
+    assign R_N_en  = (loading_data[2:0] == 3'b010 && state != STATE_DONE && state != STATE_SAVE);
+    assign R2_N_en = (loading_data[2:0] == 3'b011 && state != STATE_DONE && state != STATE_SAVE);
+    
+    // connect all registers to the dma rx data
+    assign save_input = dma_rx_data;
+      
+  //// RSA PART
+  
+    // Here is a register for the computation. Sample the dma data input in
+  // STATE_RX_WAIT. Update the data with a dummy operation in STATE_COMP.
+  // In this example, the dummy operation sets most-significant 32-bit to zeros.
+  // Use this register also for the data output.
+  reg [1023:0] r_data = 1024'h0;
+  always@(posedge clk)
+    case (state)
+      STATE_RX_WAIT : r_data <= (dma_done) ? dma_rx_data : r_data;
+      STATE_COMPUTE : r_data <= {32'h0BADCAFE, r_data[991:0]};
+    endcase
+  assign dma_tx_data = r_data;
 
+  
+  
+  // In this example we have only one computation command.
+  wire isCmdComp = (command == 32'd1);
+  wire isCmdIdle = (command == 32'd0);
+  
+  // command to check if receiving save data
+  wire isCmdSave = (loading_data != 32'd0);
+
+    
   always@(*) begin
     // defaults
     next_state   <= STATE_IDLE;
@@ -75,7 +131,7 @@ module rsa (
     case (state)
       // Wait in IDLE state till a compute command
       STATE_IDLE: begin
-        next_state <= (isCmdComp) ? STATE_RX : state;
+        next_state <= (isCmdComp || isCmdSave) ? STATE_RX : state;
       end
 
       // Wait, if dma is not idle. Otherwise, start dma operation and go to
@@ -86,7 +142,12 @@ module rsa (
 
       // Wait the completion of dma.
       STATE_RX_WAIT : begin
-        next_state <= (dma_done) ? STATE_COMPUTE : state;
+        next_state <= (dma_done) ? (isCmdComp) ? STATE_COMPUTE : STATE_SAVE : state;
+      end
+      
+      // Saving the dma data in various registers
+      STATE_SAVE : begin
+        next_state <= STATE_DONE;           
       end
 
       // A state for dummy computation for this example. Because this
@@ -113,12 +174,12 @@ module rsa (
       // indicate the state with the status register, so that the CPU will know
       // FPGA is done with computation and waiting for the idle command.
       STATE_DONE : begin
-        next_state <= (isCmdIdle) ? STATE_IDLE : state;
+        next_state <= (isCmdIdle && ~isCmdSave) ? STATE_IDLE : state;
       end
 
     endcase
   end
-
+  
   always@(posedge clk) begin
     dma_rx_start <= 1'b0;
     dma_tx_start <= 1'b0;
@@ -132,23 +193,10 @@ module rsa (
   always@(posedge clk)
     state <= (~resetn) ? STATE_IDLE : next_state;
 
-
-  // Here is a register for the computation. Sample the dma data input in
-  // STATE_RX_WAIT. Update the data with a dummy operation in STATE_COMP.
-  // In this example, the dummy operation sets most-significant 32-bit to zeros.
-  // Use this register also for the data output.
-  reg [1023:0] r_data = 1024'h0;
-  always@(posedge clk)
-    case (state)
-      STATE_RX_WAIT : r_data <= (dma_done) ? dma_rx_data : r_data;
-      STATE_COMPUTE : r_data <= {32'h0BADCAFE, r_data[991:0]};
-    endcase
-  assign dma_tx_data = r_data;
-
-
-  // Status signals to the CPU
+  
   wire isStateIdle = (state == STATE_IDLE);
   wire isStateDone = (state == STATE_DONE);
-  assign status = {29'b0, dma_error, isStateIdle, isStateDone};
-    */
+  assign status = {26'b0, loading_data[3:0], dma_error, isStateIdle, isStateDone};
+  
+  
 endmodule
