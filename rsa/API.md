@@ -1,7 +1,7 @@
-# API information - RSA - codesign
+# API information RSA codesign
 
 
-- [API information - RSA - codesign](#api-information---rsa---codesign)
+- [API information RSA codesign](#api-information-rsa-codesign)
   - [Input register](#input-register)
     - [Reasoning and discussion](#reasoning-and-discussion)
   - [Output register](#output-register)
@@ -29,13 +29,13 @@ We will only 3 loading operations to load N,R_N and R2_N.
 
 ## Output register
 
-| Register | Description | Explanations |
-| :------: | :---------: | :----------: |
-|  Rout0   |             |              |
-|  Rout1   |             |              |
-|  Rout2   |             |              |
-|  Rout3   |             |              |
-|  Rout4   |             |              |
-|  Rout5   |             |              |
-|  Rout6   |             |              |
-|  Rout7   |             |              |
+| Register |  Description   |                   Explanations                   |
+| :------: | :------------: | :----------------------------------------------: |
+|  Rout0   |     Status     |       indicate the status of the Hardware        |
+|  Rout1   |     LSB_N      |  will write the 32 last bits of the register N   |
+|  Rout2   |    LSB_R_N     | will write the 32 last bits of the register R_N  |
+|  Rout3   |    LSB_R2_N    | will write the 32 last bits of the register R2_N |
+|  Rout4   | dma_rx_address |   dbg to check the address of the DMA receive    |
+|  Rout5   |    Loading     |        indicate what data are we loading         |
+|  Rout6   |     State      |          indicate the state of the FSM           |
+|  Rout7   |                |                                                  |

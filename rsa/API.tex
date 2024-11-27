@@ -1,0 +1,98 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\author{}
+\date{}
+
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\begin{document}
+
+\hypertarget{api-information-rsa-codesign}{%
+\section{API information RSA
+codesign}\label{api-information-rsa-codesign}}
+
+\begin{itemize}
+\tightlist
+\item
+  \protect\hyperlink{api-information-rsa-codesign}{API information RSA
+  codesign}
+
+  \begin{itemize}
+  \tightlist
+  \item
+    \protect\hyperlink{input-register}{Input register}
+
+    \begin{itemize}
+    \tightlist
+    \item
+      \protect\hyperlink{reasoning-and-discussion}{Reasoning and
+      discussion}
+    \end{itemize}
+  \item
+    \protect\hyperlink{output-register}{Output register}
+  \end{itemize}
+\end{itemize}
+
+\hypertarget{input-register}{%
+\subsection{Input register}\label{input-register}}
+
+\begin{longtable}[]{@{}ccc@{}}
+\toprule
+Register & Description & Explanations \\
+\midrule
+\endhead
+Rin0 & command register & Main register to send input command \\
+Rin1 & dma\_rx\_address & here is the DMA receive address \\
+Rin2 & dma\_tx\_address & here is the DMA transmit address \\
+Rin3 & t & saves the value of the exponent \\
+Rin4 & t\_len & used during the loading of the data \\
+Rin5 & Loading data status & Command to indicate the state of the
+loading \\
+Rin6 & & \\
+Rin7 & & \\
+\bottomrule
+\end{longtable}
+
+\hypertarget{reasoning-and-discussion}{%
+\subsubsection{Reasoning and
+discussion}\label{reasoning-and-discussion}}
+
+I have decided to not transfer the exponet e over DMA since most common
+choice of exponents for RSA algorithm is a 16 bits + 1 integers and all
+of the vector test that I produced gave me some 16 bits exponents.
+Theoritically, we could go higher but we will loose in speed for any RSA
+implementation. So since we are taking less than 32 bits, I will
+transfer e and its length through a register and not wasting clock
+cycles loading it.
+
+We will only 3 loading operations to load N,R\_N and R2\_N.
+
+\hypertarget{output-register}{%
+\subsection{Output register}\label{output-register}}
+
+\begin{longtable}[]{@{}ccc@{}}
+\toprule
+Register & Description & Explanations \\
+\midrule
+\endhead
+Rout0 & & \\
+Rout1 & & \\
+Rout2 & & \\
+Rout3 & & \\
+Rout4 & & \\
+Rout5 & & \\
+Rout6 & & \\
+Rout7 & & \\
+\bottomrule
+\end{longtable}
+
+\end{document}
