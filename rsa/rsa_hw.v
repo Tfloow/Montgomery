@@ -1,4 +1,4 @@
-module rsa_sjouke (
+module rsa_hw (
     input clk,
     input resetn,
 
@@ -8,9 +8,10 @@ module rsa_sjouke (
     input wire [1023:0] M,
     input wire [31:0]   t,
     input wire [31:0]   t_len,
-    input wire [31:]    command,
+    input wire [31:0]    command,
 
-    output reg [1023:0] dma_tx_address
+    output wire [1023:0] dma_tx_address,
+    output wire [31:0] rout0
 );
     
 //counter  

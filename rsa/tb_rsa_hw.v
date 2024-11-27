@@ -6,28 +6,22 @@ module tb_rsa_hw(
     );
     
         // Define internal regs and wires
-    reg           clk;
-    reg           resetn;
-    reg  [1026:0] in_a;
-    reg  [1026:0] in_b;
-    reg           start;
-    reg           subtract;
-    wire [1027:0] result;
-    wire          done;
+    reg clk,
+    reg resetn,
 
-    reg  [1027:0] expected;
-    reg           result_ok;
+    reg [1023:0] N_Q,
+    reg [1023:0] R_N_Q,
+    reg [1023:0] R2_N_Q,
+    reg [1023:0] M,
+    reg [31:0]   t,
+    reg [31:0]   t_len,
+    reg [31:0]   command,
+
+    wire [1023:0] dma_tx_address
+    wire [31:0] rout0
 
     // Instantiating adder
-    mpadder dut (
-        .clk      (clk     ),
-        .resetn   (resetn  ),
-        .start    (start   ),
-        .subtract (subtract),
-        .in_a     (in_a    ),
-        .in_b     (in_b    ),
-        .result   (result  ),
-        .done     (done    ));
+    rsa_hw dut (clk, resetn, N_Q, R_N_Q, R2_N_Q, M, t, t_len, command, dma_tx_address, rout0);
 
     // Generate Clock
     initial begin
@@ -37,10 +31,13 @@ module tb_rsa_hw(
 
     // Initialize signals to zero
     initial begin
-        in_a     <= 0;
-        in_b     <= 0;
-        subtract <= 0;
-        start    <= 0;
+        N_Q <= 1024'hccd61077400aba4c98a62f433339650adcf9069c6bb24dd60bba4028f693324978055a3d08714b05015e270b7556d71488695fd12f8272f1d520ac979d96440401d3de7ddddab60b458971b6e683fc3c3de09b8cdef188efe99045ab59000e06e5345506bc860be0a1fd8b703b3a20de58e314bf47a5e8142d275cd928c9249d;
+        R_N_Q <= 1024'h3329ef88bff545b36759d0bcccc69af52306f963944db229f445bfd7096ccdb687faa5c2f78eb4fafea1d8f48aa928eb7796a02ed07d8d0e2adf53686269bbfbfe2c2182222549f4ba768e49197c03c3c21f6473210e7710166fba54a6fff1f91acbaaf94379f41f5e02748fc4c5df21a71ceb40b85a17ebd2d8a326d736db63;
+        R2_N_Q <= 1024'h1f15c169ccf6db0eadb669fed1b94a0d175805506c347e19ec2d0339a336a065444da79191abfe40fb8ad4936c9a19f2f13f8be9d043fc804e96c23dfdd351a33f92cef0520c79b577949f4f03ee50789bca8d50d5258da93f787503b62440a8baf662063f74e61837198dd81202d618114f8acdad9bd3f5847a5bd11247ae04;
+        M <= 1024'h8eb60bf5e833600adfdd8a07dad62ff16d598dc59c7dbc9832ece3c7b055e0b0d54dfc4fa8d0087b73b23009adb1e6f246d0fccbefb98465b8de04119df17a8179638497c4cef4e3f9c9c2efa40fef1eb20079da4deda86fcfeee16be329c697d3d7226b11a9378db6c466fd671397f0ad8a0fd6fe6a62b65d058af9433b2afe;
+        t <= 32'h00009985;
+        t_len <= 32'd16;
+        command <= 32'd0;
     end
 
     // Reset the circuit
@@ -50,103 +47,15 @@ module tb_rsa_hw(
         resetn = 1;
     end
 
-    task perform_add;
-        input [1026:0] a;
-        input [1026:0] b;
-        begin
-            in_a <= a;
-            in_b <= b;
-            start <= 1'd1;
-            subtract <= 1'd0;
-            #`CLK_PERIOD;
-            start <= 1'd0;
-            wait (done==1);
-            #`CLK_PERIOD;
-        end
-    endtask
-
-    task perform_sub;
-        input [1026:0] a;
-        input [1026:0] b;
-        begin
-            in_a <= a;
-            in_b <= b;
-            start <= 1'd1;
-            subtract <= 1'd1;
-            #`CLK_PERIOD;
-            start <= 1'd0;
-            wait (done==1);
-            #`CLK_PERIOD;
-        end
-    endtask
-
     initial begin
 
-    #`RESET_TIME
+        #`RESET_TIME
 
-    /*************TEST ADDITION*************/
-    
-    $display("\nAddition with testvector 1");
-    
-    // Check if 1+1=2
-    #`CLK_PERIOD;
-    perform_add(1027'h1, 
-                1027'h1);
-    expected  = 1028'h2;
-    wait (done==1);
-    result_ok = (expected==result);
-    $display("result calculated=%x", result);
-    $display("result expected  =%x", expected);
-    $display("error            =%x", expected-result);
-    #`CLK_PERIOD;   
-    
-    
-    $display("\nAddition with testvector 2");
+        command <= 32'd1;
+        wait(rout == 32'd1)
 
-    // Test addition with large test vectors. 
-    // You can generate your own vectors with testvector generator python script.
-    perform_add(1027'h493b6761a0b1e90b4644c7b6e9504b3724a3ab05035414db29557f9bb789fcdfc7d9a1291f73b63756e42187bf1693b0c91b83b39c5d90a62d4a20174eda45eb6d72cb5aec8e7b15565c3efaabc289db0dbc12d780a144e446e8a350eb2f0149ea50d1f65ee45e41797ccf8343bc4da82e592a6322dcf940c3dcbbdf58f29103b,
-                1027'h5a5468f37ce9d90445b8193ea750d077e150df3c824b3a9ee4326c518b0b2df79c109feef81bccd00f92397f461a5ed229d42a4e730ea84492389257ca1fce5d70bc999031182e53d2879aca7aa4279f4bb313454410c495f308b6f62f599d56e6a2029f3b02d8d5d45e04c6f1fe26ca84a44101917485096e7ba0debc24a027e);
-    expected  = 1028'ha38fd0551d9bc20f8bfce0f590a11baf05f48a41859f4f7a0d87ebed42952ad763ea4118178f830766765b070530f282f2efae020f6c38eabf82b26f18fa1448de2f64eb1da6a96928e3d9c52666b17a596f261cc4b2097a39f15a471a889ea0d0f2d49599e737174ddad44a35ba7472b2fd6b64b4517e4a32585cbe1517312b9;
-    wait (done==1);
-    result_ok = (expected==result);
-    $display("result calculated=%x", result);
-    $display("result expected  =%x", expected);
-    $display("error            =%x", expected-result);
-    #`CLK_PERIOD;     
-    
-    /*************TEST SUBTRACTION*************/
-
-    $display("\nSubtraction with testvector 1");
-    
-    // Check if 1-1=0
-    #`CLK_PERIOD;
-    perform_sub(1027'h1, 
-                1027'h1);
-    expected  = 1028'h0;
-    wait (done==1);
-    result_ok = (expected==result);
-    $display("result calculated=%x", result);
-    $display("result expected  =%x", expected);
-    $display("error            =%x", expected-result);
-    #`CLK_PERIOD;    
-
-
-    $display("\nSubtraction with testvector 2");
-
-    // Test subtraction with large test vectors. 
-    // You can generate your own vectors with testvector generator python script.
-    perform_sub(1027'h6fb734834375c10c35cd8b58baecd83e32a5249d46f5ff6def02094d2a8733ddd742f92c882b522402700bd74004776e7498e7545abccda330761b80d520326d8762484d6b60908f74f31fd320bb8b6cc5cef91632e1a4bac9b7b946602af8bb662889e6e8ed52c178506c1f3a064581c926c23b8ff85c247827b578aff2ef518,
-                1027'h716dd59f485e8c4487b824d5e6500bd021216a91d1d85cb048560a974db668281526d378533bae9acd8c1bf1099f39cfec93111fa7dcf31d2e75410d88769068da07ecdf7bf562167e52817720d03a6d6bbcd76e997dfdb5e95e393446cdfe1601b2a424b06501d121037587cc0895c7bcc96a13e3312785ad637fa6fcb330218);
-    expected  = 1028'hfe495ee3fb1734c7ae156682d49ccc6e1183ba0b751da2bda6abfeb5dcd0cbb5c21c25b434efa38934e3efe636653d9e8805d634b2dfda860200da734ca9a204ad5a5b6def6b2e78f6a09e5bffeb50ff5a1221a79963a704e0598012195cfaa56475e5c2388850f0574cf6976dfdafba0c5d5827acc7349ecac435d1b33fbf300;
-    wait (done==1);
-    result_ok = (expected==result);
-    $display("result calculated=%x", result);
-    $display("result expected  =%x", expected);
-    $display("error            =%x", expected-result);
-    #`CLK_PERIOD;    
-    
-    $finish;
+        $finish
+        
 
     end
 
