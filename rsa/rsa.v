@@ -25,6 +25,7 @@ module rsa (
   // In this example three input registers are used.
   // The first one is used for giving a command to FPGA.
   // The others are for setting DMA input and output data addresses.
+  reg [31:0] counter_clk = 32'b0;
   wire [31:0] command;
   wire [31:0] t;
   wire [31:0] t_len;
@@ -39,12 +40,9 @@ module rsa (
   // Only one output register is used. It will the status of FPGA's execution.
   wire [31:0] status;
   assign rout0 = status; // use rout0 as status
-  assign rout1 = 32'b0;  // not used
-  assign rout2 = 32'b0;  // not used
-  assign rout3 = 32'b0;  // not used
-  assign rout4 = 32'b0;  // not used
-  assign rout5 = 32'b0;  // not used
-  assign rout6 = 32'b0;  // not used
+
+  assign rout4 = dma_rx_address;  // not used
+  assign rout5 = loading_data;  // not used
   assign rout7 = 32'b0;  // not used
   
     // define status
@@ -98,6 +96,13 @@ module rsa (
     
     // connect all registers to the dma rx data
     assign save_input = dma_rx_data;
+    
+    // DBG - Write the LSB to those output register
+    assign rout1 = N_Q;  
+    assign rout2 = R_N_Q; 
+    assign rout3 = R2_N_Q;  
+    assign rout6 = state;  // not used
+
       
   //// RSA PART
   
@@ -181,6 +186,7 @@ module rsa (
   end
   
   always@(posedge clk) begin
+    counter_clk <= counter_clk + 1;
     dma_rx_start <= 1'b0;
     dma_tx_start <= 1'b0;
     case (state)

@@ -176,7 +176,10 @@ module tb_rsa_wrapper();
               T       = 12,
               T_LEN   = 16,
               LOADING = 20,
-              STATUS  = 0;
+              STATUS  = 0,
+              LSB_N   = 4,
+              LSB_R_N = 8,
+              LSB_R2_N= 12;
 
   // Byte Addresses of 1024-bit distant memory locations
   // here we talk with byte watch out
