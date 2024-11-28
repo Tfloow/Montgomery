@@ -1,21 +1,3 @@
-% Options for packages loaded elsewhere
-\PassOptionsToPackage{unicode}{hyperref}
-\PassOptionsToPackage{hyphens}{url}
-%
-\documentclass[
-]{article}
-\author{}
-\date{}
-
-\usepackage{amsmath,amssymb}
-\usepackage{lmodern}
-\usepackage{iftex}
-
-\usepackage[T1]{fontenc}
-\usepackage{lmodern}
-
-\begin{document}
-
 \hypertarget{api-information-rsa-codesign}{%
 \section{API information RSA
 codesign}\label{api-information-rsa-codesign}}
@@ -45,11 +27,22 @@ codesign}\label{api-information-rsa-codesign}}
 \hypertarget{input-register}{%
 \subsection{Input register}\label{input-register}}
 
-\begin{longtable}[]{@{}ccc@{}}
-\toprule
-Register & Description & Explanations \\
-\midrule
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1127}}
+  >{\centering\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2676}}
+  >{\centering\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.6197}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Register
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Description
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Explanations
+\end{minipage} \\
+\midrule\noalign{}
 \endhead
+\bottomrule\noalign{}
+\endlastfoot
 Rin0 & command register & Main register to send input command \\
 Rin1 & dma\_rx\_address & here is the DMA receive address \\
 Rin2 & dma\_tx\_address & here is the DMA transmit address \\
@@ -59,7 +52,6 @@ Rin5 & Loading data status & Command to indicate the state of the
 loading \\
 Rin6 & & \\
 Rin7 & & \\
-\bottomrule
 \end{longtable}
 
 \hypertarget{reasoning-and-discussion}{%
@@ -79,20 +71,30 @@ We will only 3 loading operations to load N,R\_N and R2\_N.
 \hypertarget{output-register}{%
 \subsection{Output register}\label{output-register}}
 
-\begin{longtable}[]{@{}ccc@{}}
-\toprule
-Register & Description & Explanations \\
-\midrule
+\begin{longtable}[]{@{}
+  >{\centering\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1143}}
+  >{\centering\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2000}}
+  >{\centering\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.6857}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\centering
+Register
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Description
+\end{minipage} & \begin{minipage}[b]{\linewidth}\centering
+Explanations
+\end{minipage} \\
+\midrule\noalign{}
 \endhead
-Rout0 & & \\
-Rout1 & & \\
-Rout2 & & \\
-Rout3 & & \\
-Rout4 & & \\
-Rout5 & & \\
-Rout6 & & \\
+\bottomrule\noalign{}
+\endlastfoot
+Rout0 & Status & indicate the status of the Hardware \\
+Rout1 & LSB\_N & will write the 32 last bits of the register N \\
+Rout2 & LSB\_R\_N & will write the 32 last bits of the register R\_N \\
+Rout3 & LSB\_R2\_N & will write the 32 last bits of the register
+R2\_N \\
+Rout4 & dma\_rx\_address & dbg to check the address of the DMA
+receive \\
+Rout5 & Loading & indicate what data are we loading \\
+Rout6 & State & indicate the state of the FSM \\
 Rout7 & & \\
-\bottomrule
 \end{longtable}
-
-\end{document}
