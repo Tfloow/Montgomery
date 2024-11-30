@@ -25,6 +25,21 @@ void write_to_buffer(uint32_t* message_buffer, char* message){
     }
 }
 
+void decode_message(uint32_t* message_buffer, char* message){
+    /*
+    message_buffer : a 128 bytes array of 32 bits integer
+    message        : a string of character we want to send that has been already set into 128 bytes
+    */
+    // Writing to the buffer
+    for(int i = 32; i > 0; i--){
+        message[128 - 4*i + 3] = (char) (message_buffer[i-1]);
+        message[128 - 4*i + 2] = (char) (message_buffer[i-1] >> 8);
+        message[128 - 4*i + 1] = (char) (message_buffer[i-1] >> 16);
+        message[128 - 4*i + 0] = (char) (message_buffer[i-1] >> 24);
+    }
+    message[128] = '\0';
+}
+
 int main(int argc, char** argv){
     if(argc != 2){
         printf("[LOG] : You should provide an input string between double quotes\n");
@@ -35,6 +50,7 @@ int main(int argc, char** argv){
     double amount_of_frame = ceil((float) size/128); // since we can fit as maximum 128 bytes (if ASCII we can fit 142)
     alignas(128) uint32_t message[32] = {0};
     char sanitize_input[32*4] = {0};
+    char decode_output[32*4 + 1]  = {0};
 
     printf("[LOG] : Amount of characters : %d\n",size);
     printf("[LOG] : Text : %s\n", argv[1]);
@@ -52,6 +68,10 @@ int main(int argc, char** argv){
         write_to_buffer(message, sanitize_input);
         printf("______\n");
         print_array_contents(message);
+
+        // Decode test
+        decode_message(message, decode_output);
+        printf("[LOG] : Decoded : %s\n",decode_output);
     }
 
     return 0;
