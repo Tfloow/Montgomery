@@ -1,5 +1,9 @@
 FLAGS=-Wextra -Wall -Wfloat-equal -Wundef -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wstrict-overflow=5 -Wwrite-strings -Waggregate-return -Wcast-qual -Wswitch-default -Wswitch-enum -Wconversion -Wunreachable-code
 
+main: main.c
+	gcc $? -o main $(FLAGS)
+	./main.exe
+
 convert: convert_to_verilog.c
 	gcc $? -o convert $(FLAGS)
 	./convert

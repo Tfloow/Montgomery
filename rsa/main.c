@@ -1,5 +1,7 @@
 #include "common.h"
 #include <stdalign.h>
+#include <math.h>
+#include <string.h>
   
 // These variables are defined in the testvector.c
 // that is created by the testvector generator python script
@@ -13,12 +15,40 @@ extern uint32_t N[32],    // modulus
                 R2_N[32];// (2^1024)^2 mod N
 
 #define ISFLAGSET(REG,BIT) ( (REG & (1<<BIT)) ? 1 : 0 )
+#define SEND_MY_MESSAGE 0
 
 void print_array_contents(uint32_t* src) {
   int i;
   for (i=32-4; i>=0; i-=4)
     xil_printf("%08x %08x %08x %08x\n\r",
       src[i+3], src[i+2], src[i+1], src[i]);
+}
+
+void write_to_buffer(uint32_t* message_buffer, char* message){
+    /*
+    message_buffer : a 128 bytes array of 32 bits integer
+    message        : a string of character we want to send that has been already set into 128 bytes
+    */
+    // Writing to the buffer
+    for(int i = 32; i > 0; i--){
+        message_buffer[i-1] = (uint32_t) (message[128 - 4*i + 3]) + (uint32_t) ((message[128 - 4*i + 2]) << 8)
+                            + (uint32_t) ((message[128 - 4*i + 1]) << 16) + (uint32_t) ((message[128 - 4*i + 0]) << 24); // write 8 bits character in 4 bytes
+    }
+}
+
+void encode_message(uint32_t* m, char* message_to_send, uint32_t size, uint32_t blocks){
+  /*
+  m               : the 128 bytes aligned buffer 
+  message_to_send : the full text we want to encrypt
+  size            : amount of character in the message_to_send string
+  blocks          : to keep track if we are at the first or more block of message
+  */
+  char sanitize_input[32*4] = {0};
+  // write to the sanitize input
+  for(uint32_t j = 0; j < fmin(128, size - blocks*128); j++){
+      sanitize_input[j] = message_to_send[blocks*128 + j];
+  }
+  write_to_buffer(m, sanitize_input);
 }
 
 int main() {
@@ -156,34 +186,67 @@ int main() {
         while((HWreg[STATUS] & 0x01) == 0);
         HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
     }
-    // the message stays inside the DMA
-    HWreg[RXADDR]  = (uint32_t) M;
 
+    
     // saves the length of exponent
     HWreg[T]     = e[0];
     HWreg[T_LEN] = 16;
+    
+    if SEND_MY_MESSAGE{
+      char* my_message = "Hello World ! This is a test text for the RSA algorithm. This text is longer than 128 characters to check the splitting of message. Does it work ?";
+      uint32_t size = (uint32_t) strlen(my_message);
+      uint32_t amount_of_frame = (uint32_t) ceil((float) size/128);
+      alignas(128) uint32_t* m[32] = {0};
 
-    // Running the montgomery Exponentiation
 
-    HWreg[COMMAND] = 0x01;
-    // Wait until FPGA is done
-    while((HWreg[STATUS] & 0x01) == 0);
-    STOP_TIMING
+      for(uint32_t blocks = 0; blocks < amount_of_frame; blocks++){
+        encode_message(m, my_message,size,blocks);
 
-    HWreg[COMMAND] = 0x00;
+        // the message stays inside the DMA
+        HWreg[RXADDR]  = (uint32_t) m;
 
-    printf("STATUS 0 %08X | Done %d | Idle %d | Error %d \r\n", (unsigned int)HWreg[STATUS], ISFLAGSET(HWreg[STATUS],0), ISFLAGSET(HWreg[STATUS],1), ISFLAGSET(HWreg[STATUS],2));
-    printf("LSB_N 1 %08X\r\n", (unsigned int)HWreg[1]);
-    printf("LSB_R_N 2 %08X\r\n", (unsigned int)HWreg[2]);
-    printf("LSB_R2_N 3 %08X\r\n", (unsigned int)HWreg[3]);
-    printf("DMA 4 %08X\r\n", (unsigned int)HWreg[4]);
-    printf("Loading 5 %08X\r\n", (unsigned int)HWreg[5]);
-    printf("State 6 %08X\r\n", (unsigned int)HWreg[6]);
-    printf("Load 7 %08X\r\n", (unsigned int)HWreg[7]);
+        // Running the montgomery Exponentiation
 
-    // print the result against the output datas
-    printf("\r\nI_Data:\r\n"); print_array_contents(res);
-    printf("\r\nO_Data:\r\n"); print_array_contents(odata);
+        HWreg[COMMAND] = 0x01;
+        // Wait until FPGA is done
+        while((HWreg[STATUS] & 0x01) == 0);
+        STOP_TIMING
+
+        HWreg[COMMAND] = 0x00;
+
+        printf("\r\nO_Data:\r\n"); 
+        print_array_contents(odata);
+        printf("_______\n");
+      }
+
+
+    }
+    else{
+      // the message stays inside the DMA
+      HWreg[RXADDR]  = (uint32_t) M;
+
+      // Running the montgomery Exponentiation
+
+      HWreg[COMMAND] = 0x01;
+      // Wait until FPGA is done
+      while((HWreg[STATUS] & 0x01) == 0);
+      STOP_TIMING
+
+      HWreg[COMMAND] = 0x00;
+
+      printf("STATUS 0 %08X | Done %d | Idle %d | Error %d \r\n", (unsigned int)HWreg[STATUS], ISFLAGSET(HWreg[STATUS],0), ISFLAGSET(HWreg[STATUS],1), ISFLAGSET(HWreg[STATUS],2));
+      printf("LSB_N 1 %08X\r\n", (unsigned int)HWreg[1]);
+      printf("LSB_R_N 2 %08X\r\n", (unsigned int)HWreg[2]);
+      printf("LSB_R2_N 3 %08X\r\n", (unsigned int)HWreg[3]);
+      printf("DMA 4 %08X\r\n", (unsigned int)HWreg[4]);
+      printf("Loading 5 %08X\r\n", (unsigned int)HWreg[5]);
+      printf("State 6 %08X\r\n", (unsigned int)HWreg[6]);
+      printf("Load 7 %08X\r\n", (unsigned int)HWreg[7]);
+
+      // print the result against the output datas
+      printf("\r\nI_Data:\r\n"); print_array_contents(res);
+      printf("\r\nO_Data:\r\n"); print_array_contents(odata);
+    }
   }
 
   cleanup_platform();

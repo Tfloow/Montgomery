@@ -25,6 +25,20 @@ void write_to_buffer(uint32_t* message_buffer, char* message){
     }
 }
 
+void encode_message(char* m, char* message_to_send, char* sanitize_input, uint32_t amount_of_frame, uint32_t size){
+    for(uint32_t blocks = 0; blocks < amount_of_frame; blocks++){
+        // clean the sanitize input
+        for(uint32_t j = 0; j < 32*4; j++){
+            sanitize_input[j] = 0;
+        }
+        // write to the sanitize input
+        for(uint32_t j = 0; j < fmin(128, size - blocks*128); j++){
+            sanitize_input[j] = message_to_send[blocks*128 + j];
+        }
+        write_to_buffer(m, sanitize_input);
+    }
+}
+
 void decode_message(uint32_t* message_buffer, char* message){
     /*
     message_buffer : a 128 bytes array of 32 bits integer
