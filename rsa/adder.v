@@ -22,9 +22,7 @@ module mpadder #(parameter ADDER_SIZE = 514)(
     reg  [1026:0]   regA_Q;
     reg             regA_en;
     always @(posedge clk) begin
-        if(~resetn)
-            regA_Q <= 1027'd0;
-        else if(regA_en)
+        if(regA_en)
             regA_Q <= regA_D;
     end
 
@@ -43,9 +41,7 @@ module mpadder #(parameter ADDER_SIZE = 514)(
     reg  [1026:0]   regB_Q;
     reg             regB_en;
     always @(posedge clk) begin
-        if(~resetn)
-            regB_Q <= 1027'd0;
-        else if(regB_en)
+        if(regB_en)
             regB_Q <= regB_D;
     end
 
@@ -73,9 +69,7 @@ module mpadder #(parameter ADDER_SIZE = 514)(
     reg  [ADDER_RES_WIDTH-1:0]   regResult_Q;
     reg             regResult_en;
     always @(posedge clk) begin
-        if(~resetn)
-            regResult_Q <= {ADDER_RES_WIDTH{1'd0}};
-        else if(regResult_en)
+        if(regResult_en)
             regResult_Q <= {result_add, regResult_Q[ADDER_RES_WIDTH-1:ADDER_SIZE]}; // concatenation
     end
 

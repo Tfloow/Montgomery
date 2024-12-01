@@ -79,11 +79,11 @@ module rsa (
     end
     
     // R_N
-    reg [1023:0] R_N_Q;
+    /*reg [1023:0] R_N_Q;
     always @(posedge clk) begin
         if(R_N_en)
             R_N_Q <= save_input;
-    end
+    end*/
     
     // R2_N
     reg [1023:0] R2_N_Q;
@@ -94,7 +94,7 @@ module rsa (
 
     // control the enabled pin through loading command
     assign N_en    = (loading_data[2:0] == 3'b001 && state != STATE_DONE && state != STATE_SAVE);
-    assign R_N_en  = (loading_data[2:0] == 3'b010 && state != STATE_DONE && state != STATE_SAVE);
+    //assign R_N_en  = (loading_data[2:0] == 3'b010 && state != STATE_DONE && state != STATE_SAVE);
     assign R2_N_en = (loading_data[2:0] == 3'b011 && state != STATE_DONE && state != STATE_SAVE);
     
     // connect all registers to the dma rx data
@@ -102,7 +102,7 @@ module rsa (
     
     // DBG - Write the LSB to those output register
     assign rout1 = N_Q;  
-    assign rout2 = R_N_Q; 
+    //assign rout2 = R_N_Q; 
     assign rout3 = R2_N_Q;  
     assign rout6 = state;  // not used
 
@@ -128,21 +128,26 @@ module rsa (
     wire isCmdComp = (command == 32'd1);
     wire isCmdIdle = (command == 32'd0);
     // montMul wire
-    wire isOneMM = isCmdComp;
-    wire isX_TildeMM = (command == 32'h3);
-    wire isDMAMM = (command == 32'h5);
-    wire isR_2NMM_SAVE = (command == 32'h7);
-    wire isX_TildeMM_SAVE = (command == 32'h9);
+    // No writing to X_tilde
+    wire isXtildeMM = isCmdComp;
+    wire isDMAMM = (command == 32'h3);
+    wire isOne = (command == 32'h5);
+    // Writing to X_tilde
+    wire isR_2NMM_SAVE = (command == 32'h9);
+    wire isX_TildeMM_SAVE = (command == 32'hB);
+    wire isDMA_SAVE = (command == 32'hD);
 
-    assign X_tilde_en = isR_2NMM_SAVE || isX_TildeMM_SAVE;
+    // When we need to update the X_tilde
+    assign X_tilde_en = (isR_2NMM_SAVE || isX_TildeMM_SAVE || isDMA_SAVE) & done_montgomery;
 
     reg sent_signal;
     assign start_montgomery = ~sent_signal && state == STATE_COMPUTE;
 
-    assign in_a = dma_rx_data;
-    assign in_b = (isOneMM) ? 1024'h1 : ((isX_TildeMM || isX_TildeMM_SAVE) ? X_tilde_Q : ((isR_2NMM_SAVE) ? R2_N_Q : dma_rx_address));
+    assign in_a = isX_TildeMM_SAVE ? X_tilde_Q : dma_rx_data;
+    assign in_b = isDMAMM ? dma_rx_data : (isOne ? 1024'h1 : (isR_2NMM_SAVE ? R2_N_Q : X_tilde_Q)); 
     assign in_m = N_Q;
-    assign dma_tx_data = result;
+    assign dma_tx_data = done_montgomery ? result : dma_tx_data; // to avoid over writing
+    // I MAY USE TOOOOOO MANY LUTS LOL
   
   // command to check if receiving save data
   wire isCmdSave = (loading_data != 32'd0);

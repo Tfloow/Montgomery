@@ -167,7 +167,7 @@ int main() {
     // Proposed CSR for command : use 8 bits : 0bxxxx x used xxx used for number fed
     uint32_t* adress_list[3] = {N,R_N,R2_N};
     START_TIMING
-    for(int i = 1; i <= 3; i++){
+    for(int i = 1; i <= 3; i+=2){ // skipping the R_N write cause no more need !!!!
         HWreg[RXADDR] = (uint32_t) adress_list[i-1]; // store address idata in reg1
         HWreg[LOADING] = (uint32_t) 8 + i; // 0b1000 + i indicating the state and which datas are being loaded.
 
