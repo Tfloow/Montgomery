@@ -108,41 +108,41 @@ module rsa (
 
       
   //// RSA PART
-  wire start_montgomery;
-  wire [1023:0] in_a;
-  wire [1023:0] in_b;
-  wire [1023:0] in_m;
-  wire [1024:0] result;
-  wire done_montgomery;
-  montgomery mont(clk, resetn, start_montgomery, in_a, in_b, in_m, result, done_montgomery);
+    wire start_montgomery;
+    wire [1023:0] in_a;
+    wire [1023:0] in_b;
+    wire [1023:0] in_m;
+    wire [1024:0] result;
+    wire done_montgomery;
+    montgomery mont(clk, resetn, start_montgomery, in_a, in_b, in_m, result, done_montgomery);
 
-  // X_tilde
-  reg [1023:0] X_tilde_Q;
-  always @(posedge clk) begin
-      if(X_tilde_en)
-          X_tilde_Q <= result;
-  end
+    // X_tilde
+    reg [1023:0] X_tilde_Q;
+    always @(posedge clk) begin
+        if(X_tilde_en)
+            X_tilde_Q <= result;
+    end
+      
     
-  
-  // In this example we have only one computation command.
-  wire isCmdComp = (command == 32'd1);
-  wire isCmdIdle = (command == 32'd0);
-  // montMul wire
-  wire isOneMM = isCmdComp;
-  wire isX_TildeMM = (command == 32'h3);
-  wire isDMAMM = (command == 32'h5);
-  wire isR_2NMM_SAVE = (command == 32'h7);
-  wire isX_TildeMM_SAVE = (command == 32'h9);
+    // In this example we have only one computation command.
+    wire isCmdComp = (command == 32'd1);
+    wire isCmdIdle = (command == 32'd0);
+    // montMul wire
+    wire isOneMM = isCmdComp;
+    wire isX_TildeMM = (command == 32'h3);
+    wire isDMAMM = (command == 32'h5);
+    wire isR_2NMM_SAVE = (command == 32'h7);
+    wire isX_TildeMM_SAVE = (command == 32'h9);
 
-  assign X_tilde_en = isR_2NMM_SAVE || isX_TildeMM_SAVE;
+    assign X_tilde_en = isR_2NMM_SAVE || isX_TildeMM_SAVE;
 
-  reg sent_signal;
-  assign start_montgomery = ~sent_signal && state == STATE_COMPUTE;
+    reg sent_signal;
+    assign start_montgomery = ~sent_signal && state == STATE_COMPUTE;
 
-  assign in_a = dma_rx_data;
-  assign in_b = (isOneMM) ? 1024'h1 : ((isX_TildeMM || isX_TildeMM_SAVE) ? X_tilde_Q : ((isR_2NMM_SAVE) ? R2_N_Q : dma_rx_address));
-  assign in_m = N_Q;
-  assign dma_tx_data = result;
+    assign in_a = dma_rx_data;
+    assign in_b = (isOneMM) ? 1024'h1 : ((isX_TildeMM || isX_TildeMM_SAVE) ? X_tilde_Q : ((isR_2NMM_SAVE) ? R2_N_Q : dma_rx_address));
+    assign in_m = N_Q;
+    assign dma_tx_data = result;
   
   // command to check if receiving save data
   wire isCmdSave = (loading_data != 32'd0);
