@@ -223,17 +223,92 @@ int main() {
     }
     else{
       // the message stays inside the DMA
-      HWreg[RXADDR]  = (uint32_t) M;
+      // THIS VERSION WILL JUST RUN THE MONTGOMERY MULTIPLICATION IN HARDWARE AND THE REST IN SOFTWARE
+      /*
+      CHANGE TO THE API
+      COMMAND :
+        0b001 : 0x01 : montMul(DMA, 1, N)
+        0b011 : 0x02 : montMul(DMA, R2N, N)
+        0b101 : 0x03 : montMul(DMA, X_tilde, N)
+        0b111 : 0x04 : montMul(DMA, DMA) 
+      */
 
       // Running the montgomery Exponentiation
-
-      HWreg[COMMAND] = 0x01;
-      // Wait until FPGA is done
+      HWreg[RXADDR]  = (uint32_t) M;
+      // Launch Montgomery Multiplication
+      HWreg[COMMAND] = 0x02;
       while((HWreg[STATUS] & 0x01) == 0);
-      STOP_TIMING
-
       HWreg[COMMAND] = 0x00;
 
+      // Write to another register in verilog
+      HWreg[RXADDR]  = (uint32_t) odata; // to write X_tilde back in verilog
+      HWreg[LOADING] = (uint32_t) 8 + 4; // NEW COMMAND
+      // wait for the FPGA to be done
+      while((HWreg[STATUS] & 0x01) == 0);
+      HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
+
+      uint32_t* A = R_N;
+
+      for(int i = 0; i < e1_len; i++){
+        if((E >> e-i-1) & 0x1){
+          // do for R_N
+          HWreg[RXADDR]  = (uint32_t) A;
+          HWreg[TXADDR]  = (uint32_t) A;
+          // Launch Montgomery Multiplication
+          HWreg[COMMAND] = 0x03;
+          while((HWreg[STATUS] & 0x01) == 0);
+          HWreg[COMMAND] = 0x00;
+
+          // do for X_tilde 
+          HWreg[RXADDR]  = (uint32_t) X_tilde;
+          HWreg[TXADDR]  = (uint32_t) X_tilde;
+          // Launch Montgomery Multiplication
+          HWreg[COMMAND] = 0x04;
+          while((HWreg[STATUS] & 0x01) == 0);
+          HWreg[COMMAND] = 0x00;
+
+          // NEED TO UPDATE X_tilde in verilog !
+          HWreg[LOADING] = (uint32_t) 8 + 4; // NEW COMMAND
+          // wait for the FPGA to be done
+          while((HWreg[STATUS] & 0x01) == 0);
+          HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
+        }else{
+          // do for X_tilde 
+          HWreg[RXADDR]  = (uint32_t) A;
+          HWreg[TXADDR]  = (uint32_t) X_tilde;
+          // Launch Montgomery Multiplication
+          HWreg[COMMAND] = 0x03;
+          while((HWreg[STATUS] & 0x01) == 0);
+          HWreg[COMMAND] = 0x00;
+
+          // NEED TO UPDATE X_tilde in verilog !
+          HWreg[RXADDR]  = (uint32_t) X_tilde;
+          HWreg[LOADING] = (uint32_t) 8 + 4; // NEW COMMAND
+          // wait for the FPGA to be done
+          while((HWreg[STATUS] & 0x01) == 0);
+          HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
+
+          // do for R_N
+          HWreg[RXADDR]  = (uint32_t) A;
+          HWreg[TXADDR]  = (uint32_t) A;
+          // Launch Montgomery Multiplication
+          HWreg[COMMAND] = 0x04;
+          while((HWreg[STATUS] & 0x01) == 0);
+          HWreg[COMMAND] = 0x00;
+        }
+
+        // do the final operation 
+        HWreg[RXADDR]  = (uint32_t) A;
+        HWreg[TXADDR]  = (uint32_t) A;
+        // Launch Montgomery Multiplication
+        HWreg[COMMAND] = 0x01;
+        while((HWreg[STATUS] & 0x01) == 0);
+        HWreg[COMMAND] = 0x00;
+
+        odata = A;
+      }
+
+      STOP_TIMING
       printf("STATUS 0 %08X | Done %d | Idle %d | Error %d \r\n", (unsigned int)HWreg[STATUS], ISFLAGSET(HWreg[STATUS],0), ISFLAGSET(HWreg[STATUS],1), ISFLAGSET(HWreg[STATUS],2));
       printf("LSB_N 1 %08X\r\n", (unsigned int)HWreg[1]);
       printf("LSB_R_N 2 %08X\r\n", (unsigned int)HWreg[2]);
@@ -242,6 +317,7 @@ int main() {
       printf("Loading 5 %08X\r\n", (unsigned int)HWreg[5]);
       printf("State 6 %08X\r\n", (unsigned int)HWreg[6]);
       printf("Load 7 %08X\r\n", (unsigned int)HWreg[7]);
+      
 
       // print the result against the output datas
       printf("\r\nI_Data:\r\n"); print_array_contents(res);
