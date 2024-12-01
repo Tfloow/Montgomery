@@ -67,6 +67,7 @@ module rsa (
     wire N_en;
     wire R_N_en;
     wire R2_N_en;
+    wire X_tilde_en;
     wire [1023:0] save_input;
   
     // registers definition
@@ -91,13 +92,6 @@ module rsa (
             R2_N_Q <= save_input;
     end
 
-    // R2_N
-    reg [1023:0] X_tilde_Q;
-    always @(posedge clk) begin
-        if(R2_N_en)
-            X_tilde_Q <= save_input;
-    end
-    
     // control the enabled pin through loading command
     assign N_en    = (loading_data[2:0] == 3'b001 && state != STATE_DONE && state != STATE_SAVE);
     assign R_N_en  = (loading_data[2:0] == 3'b010 && state != STATE_DONE && state != STATE_SAVE);
@@ -120,19 +114,15 @@ module rsa (
   wire [1023:0] in_m;
   wire [1024:0] result;
   wire done_montgomery;
-  montgomery mont(clk,resetn,start_montgomery,in_a,in_b,in_m,result,done_montgomery);
-  
-    // Here is a register for the computation. Sample the dma data input in
-  // STATE_RX_WAIT. Update the data with a dummy operation in STATE_COMP.
-  // In this example, the dummy operation sets most-significant 32-bit to zeros.
-  // Use this register also for the data output.
-  reg [1023:0] r_data = 1024'h0;
-  always@(posedge clk)
-    case (state)
-      STATE_RX_WAIT : r_data <= (dma_done) ? dma_rx_data : r_data;
-      STATE_COMPUTE : r_data <= {32'h0BADCAFE, r_data[991:0]};
-    endcase
-  
+  montgomery mont(clk, resetn, start_montgomery, in_a, in_b, in_m, result, done_montgomery);
+
+  // X_tilde
+  reg [1023:0] X_tilde_Q;
+  always @(posedge clk) begin
+      if(X_tilde_en)
+          X_tilde_Q <= result;
+  end
+    
   
   // In this example we have only one computation command.
   wire isCmdComp = (command == 32'd1);
@@ -144,11 +134,13 @@ module rsa (
   wire isR_2NMM_SAVE = (command == 32'h7);
   wire isX_TildeMM_SAVE = (command == 32'h9);
 
+  assign X_tilde_en = isR_2NMM_SAVE || isX_TildeMM_SAVE;
+
   reg sent_signal;
   assign start_montgomery = ~sent_signal && state == STATE_COMPUTE;
 
   assign in_a = dma_rx_data;
-  assign in_b = (isOneMM) ? 1024'h1 : ((isX_TildeMM || isX_TildeMM_SAVE) ? X_tilde_Q : ((isR_2NMM_SAVE) ? R2_N_Q : dma_rx_address)):
+  assign in_b = (isOneMM) ? 1024'h1 : ((isX_TildeMM || isX_TildeMM_SAVE) ? X_tilde_Q : ((isR_2NMM_SAVE) ? R2_N_Q : dma_rx_address));
   assign in_m = N_Q;
   assign dma_tx_data = result;
   
