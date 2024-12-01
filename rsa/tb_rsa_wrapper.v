@@ -188,7 +188,8 @@ module tb_rsa_wrapper();
               N1_ADDR    = 16'h100,
               M1_ADDR    = 16'h180,
               R_N1_ADDR  = 16'h200,
-              R2_N1_ADDR = 16'h280;
+              R2_N1_ADDR = 16'h280,
+              A_ADDR     = 16'h300;
   
 
   reg [31:0] reg_status;
@@ -257,8 +258,7 @@ module tb_rsa_wrapper();
     // ALWAYS LOAD DATA BEFORE SENDING ANY COMMAND OR MAY CAUSE BUGS
 
     // Starting RSA
-    reg_write(COMMAND, 32'h00000001);
-    
+    reg_write(COMMAND, 32'h00000002);
     // Poll Done Signal
     reg_read(COMMAND, reg_status);
     while (reg_status[0]==1'b0) // check LSB status
@@ -266,7 +266,57 @@ module tb_rsa_wrapper();
       #`LONG_WAIT;
       reg_read(COMMAND, reg_status);
     end
-    
+    reg_write(COMMAND, 32'h00000000); // stop everything
+
+    // Save the X_tilde
+    reg_write(RXADDR, TXADDR);
+    reg_write(LOADING, 32'b1100);
+    // Poll Done Signal
+    reg_read(COMMAND, reg_status);
+    while (reg_status[0]==1'b0) 
+    begin
+      #`LONG_WAIT;
+      reg_read(COMMAND, reg_status);
+    end
+    reg_write(LOADING, 32'b0);
+
+    for (i = 0; i < 16 ; i=i+1) begin
+      if((E >> i) && 1'b1) begin 
+        reg_write(RXADDR, R_N1_ADDR);
+        reg_write(TXADDR, R_N1_ADDR);
+        reg_write(COMMAND, 32'b0011);
+        // Poll Done Signal
+        reg_read(COMMAND, reg_status);
+        while (reg_status[0]==1'b0) // check LSB status
+        begin
+          #`LONG_WAIT;
+          reg_read(COMMAND, reg_status);
+        end
+        reg_write(COMMAND, 32'h00000000); // stop everything
+
+        reg_write(RXADDR, X_tilde);
+        reg_write(TXADDR, R_N1_ADDR);
+        reg_write(COMMAND, 32'b0011);
+        // Poll Done Signal
+        reg_read(COMMAND, reg_status);
+        while (reg_status[0]==1'b0) // check LSB status
+        begin
+          #`LONG_WAIT;
+          reg_read(COMMAND, reg_status);
+        end
+        reg_write(COMMAND, 32'h00000000); // stop everything
+      end
+    end
+
+    // Starting RSA
+    reg_write(COMMAND, 32'h00000001);
+    // Poll Done Signal
+    reg_read(COMMAND, reg_status);
+    while (reg_status[0]==1'b0) // check LSB status
+    begin
+      #`LONG_WAIT;
+      reg_read(COMMAND, reg_status);
+    end
     reg_write(COMMAND, 32'h00000000); // stop everything
 
     mem_read(MEM1_ADDR); // read from memory

@@ -227,10 +227,11 @@ int main() {
       /*
       CHANGE TO THE API
       COMMAND :
-        0b001 : 0x01 : montMul(DMA, 1, N)
-        0b011 : 0x02 : montMul(DMA, R2N, N)
-        0b101 : 0x03 : montMul(DMA, X_tilde, N)
-        0b111 : 0x04 : montMul(DMA, DMA) 
+        0b0001 : 0x01 : montMul(DMA, 1, N)
+        0b0011 : 0x03 : montMul(DMA, X_tilde, N)
+        0b0101 : 0x05 : montMul(DMA, DMA) 
+        0b0111 : 0x07 : montMul(DMA, R2N, N) and will save it to the X_tilde register
+        0b1001 : 0x09 : montMul(DMA, X_tilde, N) and will save it to the X_tilde register
       */
 
       // Running the montgomery Exponentiation
@@ -239,13 +240,6 @@ int main() {
       HWreg[COMMAND] = 0x02;
       while((HWreg[STATUS] & 0x01) == 0);
       HWreg[COMMAND] = 0x00;
-
-      // Write to another register in verilog
-      HWreg[RXADDR]  = (uint32_t) odata; // to write X_tilde back in verilog
-      HWreg[LOADING] = (uint32_t) 8 + 4; // NEW COMMAND
-      // wait for the FPGA to be done
-      while((HWreg[STATUS] & 0x01) == 0);
-      HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
 
       uint32_t* A = R_N;
 

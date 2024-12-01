@@ -1,3 +1,5 @@
+`include "montgomery.v"
+
 module rsa (
     input  wire          clk,
     input  wire          resetn,
@@ -88,6 +90,13 @@ module rsa (
         if(R2_N_en)
             R2_N_Q <= save_input;
     end
+
+    // R2_N
+    reg [1023:0] X_tilde_Q;
+    always @(posedge clk) begin
+        if(R2_N_en)
+            X_tilde_Q <= save_input;
+    end
     
     // control the enabled pin through loading command
     assign N_en    = (loading_data[2:0] == 3'b001 && state != STATE_DONE && state != STATE_SAVE);
@@ -105,6 +114,13 @@ module rsa (
 
       
   //// RSA PART
+  wire start_montgomery;
+  wire [1023:0] in_a;
+  wire [1023:0] in_b;
+  wire [1023:0] in_m;
+  wire [1024:0] result;
+  wire done_montgomery;
+  montgomery mont(clk,resetn,start_montgomery,in_a,in_b,in_m,result,done_montgomery);
   
     // Here is a register for the computation. Sample the dma data input in
   // STATE_RX_WAIT. Update the data with a dummy operation in STATE_COMP.
@@ -116,13 +132,25 @@ module rsa (
       STATE_RX_WAIT : r_data <= (dma_done) ? dma_rx_data : r_data;
       STATE_COMPUTE : r_data <= {32'h0BADCAFE, r_data[991:0]};
     endcase
-  assign dma_tx_data = r_data;
-
   
   
   // In this example we have only one computation command.
   wire isCmdComp = (command == 32'd1);
   wire isCmdIdle = (command == 32'd0);
+  // montMul wire
+  wire isOneMM = isCmdComp;
+  wire isX_TildeMM = (command == 32'h3);
+  wire isDMAMM = (command == 32'h5);
+  wire isR_2NMM_SAVE = (command == 32'h7);
+  wire isX_TildeMM_SAVE = (command == 32'h9);
+
+  reg sent_signal;
+  assign start_montgomery = ~sent_signal && state == STATE_COMPUTE;
+
+  assign in_a = dma_rx_data;
+  assign in_b = (isOneMM) ? 1024'h1 : ((isX_TildeMM || isX_TildeMM_SAVE) ? X_tilde_Q : ((isR_2NMM_SAVE) ? R2_N_Q : dma_rx_address)):
+  assign in_m = N_Q;
+  assign dma_tx_data = result;
   
   // command to check if receiving save data
   wire isCmdSave = (loading_data != 32'd0);
@@ -158,7 +186,7 @@ module rsa (
       // A state for dummy computation for this example. Because this
       // computation takes only single cycle, go to TX state immediately
       STATE_COMPUTE : begin
-        next_state <= STATE_TX;
+        next_state <= (done_montgomery) ? STATE_TX : STATE_COMPUTE; // won't stop until montgomery is good
       end
 
       // Wait, if dma is not idle. Otherwise, start dma operation and go to
@@ -189,8 +217,11 @@ module rsa (
     counter_clk <= counter_clk + 1;
     dma_rx_start <= 1'b0;
     dma_tx_start <= 1'b0;
+    sent_signal <= sent_signal;
     case (state)
+      IDLE: sent_signal <= 1'b0;
       STATE_RX: dma_rx_start <= 1'b1;
+      STATE_COMPUTE : sent_signal <= 1'b1;
       STATE_TX: dma_tx_start <= 1'b1;
     endcase
   end
