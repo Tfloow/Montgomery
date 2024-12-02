@@ -121,19 +121,30 @@ module rsa (
             X_tilde_Q <= result;
     end
       
-    
+    /*
+      CHANGE TO THE API
+      COMMAND :
+        0b0001 : 0x01 : MontMul(DMA, X_tilde, N)
+        0b0011 : 0x03 : MontMul(DMA, DMA, N)
+        0b0101 : 0x05 : MontMul(DMA, 1, N)
+        Write to registers commands
+        0b1001 : 0x09 : MontMul(DMA, R2N, N)
+        0b1011 : 0x0B : MontMul(X_tilde, X_tilde, N)
+        0b1101 : 0x0D : MontMUl(DMA, X_tilde, N)
+     */
     // In this example we have only one computation command.
-    wire isCmdComp = (command == 32'd1);
-    wire isCmdIdle = (command == 32'd0);
     // montMul wire
     // No writing to X_tilde
-    wire isXtildeMM = isCmdComp;
+    wire isXtildeMM = (command == 32'h1);
     wire isDMAMM = (command == 32'h3);
     wire isOne = (command == 32'h5);
     // Writing to X_tilde
     wire isR_2NMM_SAVE = (command == 32'h9);
     wire isX_TildeMM_SAVE = (command == 32'hB);
     wire isDMA_SAVE = (command == 32'hD);
+    
+    wire isCmdComp = isXtildeMM || isDMAMM || isOne || isR_2NMM_SAVE || isX_TildeMM_SAVE || isDMA_SAVE;
+    wire isCmdIdle = ~isCmdComp;
 
     // When we need to update the X_tilde
     assign X_tilde_en = (isR_2NMM_SAVE || isX_TildeMM_SAVE || isDMA_SAVE) & done_montgomery;
