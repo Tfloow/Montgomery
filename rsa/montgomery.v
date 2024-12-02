@@ -68,7 +68,7 @@ module shift_register_two(
     // The brain of the shift register
     always @ (posedge clk) begin
         // writing to memory
-        else if(enable) begin
+        if(enable) begin
             current_number <= in_number;
             // already outputing 
             out_shift <= in_number;

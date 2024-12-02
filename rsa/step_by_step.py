@@ -101,18 +101,33 @@ def MontExp_MontPowerLadder(X, E, N, DBG):
     R2N = (R*R) % N
     A  = RN
     X_tilde = MontMul(X,R2N,N, DBG)
+    print(f"X_tilde : {X_tilde:02X}")
     t = bitlen(E)
     for i in range(0,t):
         print(f"{'_'*20:20} {i}")
         if bit(E,t-i-1) == 1:
+            print("First Condition")
+            print("CMD : 0x01")
             A       = MontMul(A,X_tilde,N, DBG)
+            print(f"Result : {A:02X}")
+            print(f"{'_'*20:20}")
+            print("CMD : 0x0B")
             X_tilde = MontMul(X_tilde,X_tilde,N, DBG)
+            print(f"Result : {X_tilde:02X}")
         else:
+            print("Second Condition")
+            print("CMD : 0x0D")
             X_tilde = MontMul(A,X_tilde,N, DBG)
+            print(f"Result : {X_tilde:02X}")
+            print(f"{'_'*20:20}")
+            print("CMD : 0x03")
             A       = MontMul(A,A,N, DBG)
+            print(f"Result : {A:02X}")
 
-        break
+        #break
+    print(f"{'_'*20:20}")
     A = MontMul(A,1,N, DBG)
+    print(f"Result : {A:02X}")
     return A
 
 if __name__ == "__main__":

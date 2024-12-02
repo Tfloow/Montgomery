@@ -63,9 +63,7 @@ module rsa (
   //// LOADING PART
   
     wire N_en;
-    wire R_N_en;
     wire R2_N_en;
-    wire X_tilde_en;
     wire [1023:0] save_input;
   
     // registers definition
@@ -75,13 +73,6 @@ module rsa (
         if(N_en)
             N_Q <= save_input;
     end
-    
-    // R_N
-    /*reg [1023:0] R_N_Q;
-    always @(posedge clk) begin
-        if(R_N_en)
-            R_N_Q <= save_input;
-    end*/
     
     // R2_N
     reg [1023:0] R2_N_Q;
@@ -115,10 +106,20 @@ module rsa (
     montgomery mont(clk, resetn, start_montgomery, in_a, in_b, in_m, result, done_montgomery);
 
     // X_tilde
+    wire X_tilde_en;
+    wire [1023:0] X_tilde_D;
     reg [1023:0] X_tilde_Q;
     always @(posedge clk) begin
         if(X_tilde_en)
-            X_tilde_Q <= result;
+            X_tilde_Q <= X_tilde_D;
+    end
+    
+    // A
+    wire A_en;
+    reg [1023:0] A_Q;
+    always @(posedge clk) begin
+        if(A_en)
+            A_Q <= dma_rx_data;
     end
       
     /*
@@ -145,15 +146,19 @@ module rsa (
     
     wire isCmdComp = isXtildeMM || isDMAMM || isOne || isR_2NMM_SAVE || isX_TildeMM_SAVE || isDMA_SAVE;
     wire isCmdIdle = ~isCmdComp;
-
+    wire isSave = isR_2NMM_SAVE || isX_TildeMM_SAVE || isDMA_SAVE;
+    
     // When we need to update the X_tilde
-    assign X_tilde_en = (isR_2NMM_SAVE || isX_TildeMM_SAVE || isDMA_SAVE) & done_montgomery;
+    assign X_tilde_en = isSave & (dma_done || done_montgomery) & ~A_en;
+    assign X_tilde_D  = isR_2NMM_SAVE & ~done_montgomery ? dma_rx_data : result;
+    
+    assign A_en = ~isR_2NMM_SAVE & dma_done;
 
     reg sent_signal;
     assign start_montgomery = ~sent_signal && state == STATE_COMPUTE;
 
-    assign in_a = isX_TildeMM_SAVE ? X_tilde_Q : dma_rx_data;
-    assign in_b = isDMAMM ? dma_rx_data : (isOne ? 1024'h1 : (isR_2NMM_SAVE ? R2_N_Q : X_tilde_Q)); 
+    assign in_a = (isX_TildeMM_SAVE || isR_2NMM_SAVE) ? X_tilde_Q : A_Q;
+    assign in_b = isDMAMM ? in_a : (isOne ? 1024'h1 : (isR_2NMM_SAVE ? R2_N_Q : X_tilde_Q)); 
     assign in_m = N_Q;
     assign dma_tx_data = done_montgomery ? result : dma_tx_data; // to avoid over writing
     // I MAY USE TOOOOOO MANY LUTS LOL
@@ -192,7 +197,7 @@ module rsa (
       // A state for dummy computation for this example. Because this
       // computation takes only single cycle, go to TX state immediately
       STATE_COMPUTE : begin
-        next_state <= (done_montgomery) ? STATE_TX : STATE_COMPUTE; // won't stop until montgomery is good
+        next_state <= (done_montgomery) ? (isSave ? STATE_DONE : STATE_TX ): STATE_COMPUTE; // won't stop until montgomery is good
       end
 
       // Wait, if dma is not idle. Otherwise, start dma operation and go to
