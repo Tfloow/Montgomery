@@ -1,5 +1,3 @@
-`include "montgomery.v"
-
 module rsa (
     input  wire          clk,
     input  wire          resetn,
@@ -216,7 +214,7 @@ module rsa (
     dma_tx_start <= 1'b0;
     sent_signal <= sent_signal;
     case (state)
-      IDLE: sent_signal <= 1'b0;
+      STATE_IDLE: sent_signal <= 1'b0;
       STATE_RX: dma_rx_start <= 1'b1;
       STATE_COMPUTE : sent_signal <= 1'b1;
       STATE_TX: dma_tx_start <= 1'b1;
