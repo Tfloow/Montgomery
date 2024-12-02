@@ -206,7 +206,7 @@ int main() {
 
     
     // saves the length of exponent
-    HWreg[T]     = e[0];
+    // HWreg[T]     = e[0];
     HWreg[T_LEN] = 16;
     
     if SEND_MY_MESSAGE{
