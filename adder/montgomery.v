@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "adder.v"
+`include "adder.v" // OLD ADDER
 
 module seven_multiplexer(
     input           clk,
@@ -68,13 +68,8 @@ module shift_register_two(
     // The brain of the shift register
     always @ (posedge clk) begin
     // Reset
-        if(~restn) begin
-            current_number <= 1028'b0;
-            out_shift <= 1028'b0;
-            regDone = 1'b0;
-        end
         // writing to memory
-        else if(enable) begin
+        if(enable) begin
             current_number <= in_number;
             // already outputing 
             out_shift <= in_number;
@@ -112,12 +107,7 @@ module shift_register(
     // The brain of the shift register
     always @ (posedge clk) begin
     // Reset
-        if(~restn) begin
-            current_number <= 1025'b0;
-            out_shift <= 1025'b0;
-            regDone = 1'b0;
-        end
-        
+
         // writing to memory
         if(enable) begin
             current_number <= in_number;
@@ -160,8 +150,7 @@ module montgomery(
     reg  [1026:0] reg3B_Q;   // out
     always @(posedge clk)
     begin
-        if(~resetn)         reg3B_Q = 1027'd0;
-        else if (reg3B_en)   reg3B_Q <= reg3B_D;
+        if (reg3B_en)   reg3B_Q <= reg3B_D;
     end    
     
     // Definition register 2M
@@ -175,8 +164,7 @@ module montgomery(
     reg  [1026:0] reg3M_Q;   // out
     always @(posedge clk)
     begin
-        if(~resetn)             reg3M_Q = 1027'd0;
-        else if (reg3M_en)   reg3M_Q <= reg3M_D;
+        if (reg3M_en)   reg3M_Q <= reg3M_D;
     end
     
 
@@ -189,8 +177,7 @@ module montgomery(
     wire [1027:0] regresult_D;
     reg [1023:0] regresult_Q;
     always @(posedge clk) begin
-        if(~resetn)                regresult_Q = 1028'd0;
-        else if (regresult_en)   regresult_Q <= regresult_D;
+        if (regresult_en)   regresult_Q <= regresult_D;
     end 
           
     //shifting preparation stage

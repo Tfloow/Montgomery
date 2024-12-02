@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 ### ADDER PLOT ###
 size = [514,343,257,64]
 Cycles = [3,4,5,18]
-WNS = [0.133, 0.379, 0.474, 2.302]
-LUTS = [3231, 2634, 2530, 2139]
-REG = [3120, 3116, 3118, 3185]
+WNS = [0.376, 0.784, 0.358, 1.937]
+LUTS = [2718, 2470, 2269, 2066]
+REG = [3106, 3112, 3113, 3168]
 
 color1 = "teal"
 color2 = "brown"
@@ -51,14 +51,14 @@ plt.savefig("adder_report_perf.pdf")
 #plt.show()
 
 ### Montgomery ###
-ite = [4,3,2,1]
-Width_adder = [514, 257, 257, 64]
-Number_adder = [1, 1, 3, 3]
-Cycle_adder = [3, 5, 4, 18]
-Cycle = [3097, 6183, 13846, 28230]
-WNS = [0.346, 0.518, 0.381, 1.255]
-LUTS = [9977, 11889, 14026, 12651]
-REG = [7234, 10333, 21259, 25101]
+ite = [5, 4,3,2,1]
+Width_adder = [514, 514, 257, 257, 64]
+Number_adder = [1, 1, 1, 3, 3]
+Cycle_adder = [3, 3, 5, 4, 18]
+Cycle = [3097, 3097, 6183, 13846, 28230]
+WNS = [0.019, 0.346, 0.518, 0.381, 1.255]
+LUTS = [8289, 9977, 11889, 14026, 12651]
+REG = [7251, 7234, 10333, 21259, 25101]
 
 fig, axs = plt.subplots(1,2,figsize=(10, 4))
 
@@ -76,7 +76,7 @@ ax1_twin.plot(ite,WNS,"--v", label="Worst Negative Slack", color=color1)
 ax1.set_xlabel("Iteration of the Design")
 ax1.set_ylabel("Cycles")
 ax1_twin.set_ylabel("Worst Negative Slack [ns]")
-ax1.set_xlim(0,5)
+ax1.set_xlim(0,6)
 ax1_twin.set_ylim(0,2.5)
 ax1.grid()
 
@@ -91,7 +91,7 @@ ax2_twin.plot(ite,Number_adder,"--v", label="# of Adder", color=color2)
 ax2.set_xlabel("Iteration of the Design")
 ax2.set_ylabel("Amount")
 ax2_twin.set_ylabel("Amount of Adder")
-ax2.set_xlim(0,5)
+ax2.set_xlim(0,6)
 ax2_twin.set_ylim(0,5)
 ax2.grid()
 
