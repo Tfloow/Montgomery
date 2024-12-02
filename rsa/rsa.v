@@ -101,7 +101,7 @@ module rsa (
     wire [1023:0] in_a;
     wire [1023:0] in_b;
     wire [1023:0] in_m;
-    wire [1024:0] result;
+    wire [1023:0] result;
     wire done_montgomery;
     montgomery mont(clk, resetn, start_montgomery, in_a, in_b, in_m, result, done_montgomery);
 
@@ -160,7 +160,7 @@ module rsa (
     assign in_a = (isX_TildeMM_SAVE || isR_2NMM_SAVE) ? X_tilde_Q : A_Q;
     assign in_b = isDMAMM ? in_a : (isOne ? 1024'h1 : (isR_2NMM_SAVE ? R2_N_Q : X_tilde_Q)); 
     assign in_m = N_Q;
-    assign dma_tx_data = done_montgomery ? result : dma_tx_data; // to avoid over writing
+    assign dma_tx_data = done_montgomery ? result : 1024'h0; // to avoid over writing
     // I MAY USE TOOOOOO MANY LUTS LOL
   
   // command to check if receiving save data

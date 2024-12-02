@@ -67,8 +67,14 @@ module shift_register_two(
     
     // The brain of the shift register
     always @ (posedge clk) begin
+    // Reset
+        if(~restn) begin
+            current_number <= 1028'b0;
+            out_shift <= 1028'b0;
+            regDone = 1'b0;
+        end
         // writing to memory
-        if(enable) begin
+        else if(enable) begin
             current_number <= in_number;
             // already outputing 
             out_shift <= in_number;
@@ -139,7 +145,7 @@ module montgomery(
     input  [1023:0] in_a,
     input  [1023:0] in_b,
     input  [1023:0] in_m,
-    output [1024:0] result,
+    output [1023:0] result,
     output   wire       done
         );
 
@@ -154,7 +160,8 @@ module montgomery(
     reg  [1026:0] reg3B_Q;   // out
     always @(posedge clk)
     begin
-        if (reg3B_en)   reg3B_Q <= reg3B_D;
+        if(~resetn)         reg3B_Q = 1027'd0;
+        else if (reg3B_en)   reg3B_Q <= reg3B_D;
     end    
     
     // Definition register 2M
@@ -168,7 +175,8 @@ module montgomery(
     reg  [1026:0] reg3M_Q;   // out
     always @(posedge clk)
     begin
-        if (reg3M_en)   reg3M_Q <= reg3M_D;
+        if(~resetn)             reg3M_Q = 1027'd0;
+        else if (reg3M_en)   reg3M_Q <= reg3M_D;
     end
     
 
@@ -181,7 +189,8 @@ module montgomery(
     wire [1027:0] regresult_D;
     reg [1023:0] regresult_Q;
     always @(posedge clk) begin
-        if (regresult_en)   regresult_Q <= regresult_D;
+        if(~resetn)                regresult_Q = 1028'd0;
+        else if (regresult_en)   regresult_Q <= regresult_D;
     end 
           
     //shifting preparation stage
