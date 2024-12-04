@@ -109,12 +109,12 @@ plt.savefig("montgomery_report_perf.pdf")
 
 ### RSA ###
 # REDO IMPLEMENTATION TO FIND THE RIGHT DATA
-ite = [1,2]
-Cycle_montgomery = [3097, 3097]
-Cycle = [106469, 106469] # for 16 bit exponents
-WNS = [-.333,.118]
-LUTS = [13886, 13886]
-REG = [13865, 13865]
+ite = [1,2,3]
+Cycle_montgomery = [3097, 3097, 3097]
+Cycle = [106469, 106469, 107106] # for 16 bit exponents
+WNS = [-.333,.118,.211]
+LUTS = [13886, 13886, 13877]
+REG = [13865, 13865, 13891]
 
 fig, axs = plt.subplots(1,2,figsize=(10, 4))
 
@@ -154,3 +154,35 @@ ax2.legend()
 fig.tight_layout()
 
 plt.savefig("rsa_report_perf.pdf")
+
+# speed with test vectors
+
+seed = [5,4,3,2,1]
+encryption = [718944, 717147, 718684, 717237, 717067]
+decryption = [43150699, 42951548, 43212244, 43205017, 43116422]
+
+fig, axs = plt.subplots(1,2,figsize=(10, 4))
+axs[0].grid()
+axs[1].grid()
+
+
+axs[0].hist(encryption, label="# Cycles")
+axs[1].hist(decryption, label="# Cycles")
+
+axs[0].set_title("Speed for encrypting using testvectors 2024.X")
+axs[1].set_title("Speed for decrypting using testvectors 2024.X")
+
+axs[0].legend()
+axs[1].legend()
+
+axs[0].set_xlabel("Amount of cycles")
+axs[1].set_xlabel("Amount of cycles")
+
+axs[0].set_ylabel("Occurences")
+axs[1].set_ylabel("Occurences")
+
+#fig.tight_layout()
+
+plt.savefig("encryption_decryption_perf.pdf")
+
+plt.show()
