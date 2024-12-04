@@ -1,5 +1,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 
 ### ADDER PLOT ###
 size = [514,343,257,64]
@@ -124,6 +126,7 @@ ax2 = axs[1]
 ax1.set_title("Speed of the Montgomery Multiplier")
 ax1.plot(ite,Cycle_montgomery,"-o", label="# of Cycles Adder", color=color1)
 ax1.plot(ite,Cycle,"-s", label="# of Cycles Montgomery", color=color1)
+ax1.set_yscale("log")
 
 ax1_twin = ax1.twinx()
 ax1_twin.plot(ite,WNS,"--v", label="Worst Negative Slack", color=color1)
@@ -132,14 +135,15 @@ ax1.set_xlabel("Iteration of the Design")
 ax1.set_ylabel("Cycles")
 ax1_twin.set_ylabel("Worst Negative Slack [ns]")
 ax1.set_xlim(0,6)
-ax1_twin.set_ylim(-2.5,2.5)
+ax1.set_ylim(1,200000)
+ax1_twin.set_ylim(-1,1)
 ax1_twin.hlines(y=0,xmin=0,xmax=6, linestyles="--", alpha=0.5, color="grey")
 ax1.grid()
 
 ax2.set_title("Utilization of the Montgomery Multiplier")
-ax2.plot(ite, LUTS, "-^", label="# of Sliced LUTS", color=color2)
-ax2.plot(ite, REG,  "-s", label="# of Sliced Registers", color=color2)
-ax2.set_ylim(0,30000)
+ax2.plot(ite, LUTS, "-^", label="# of Sliced LUTS", color=color2, alpha=0.7)
+ax2.plot(ite, REG,  "-s", label="# of Sliced Registers", color=color2, alpha=0.7)
+ax2.set_ylim(0,20000)
 
 ax2.set_xlabel("Iteration of the Design")
 ax2.set_ylabel("Amount")
@@ -161,28 +165,35 @@ seed = [5,4,3,2,1]
 encryption = [718944, 717147, 718684, 717237, 717067]
 decryption = [43150699, 42951548, 43212244, 43205017, 43116422]
 
-fig, axs = plt.subplots(1,2,figsize=(10, 4))
-axs[0].grid()
-axs[1].grid()
+# Set the Seaborn style
+# sns.set_theme()
+sns.set_style(style="whitegrid")
 
+# Create subplots
+data = pd.DataFrame({
+    "Cycles": encryption + decryption,
+    "Operation": ["Encryption"] * len(encryption) + ["Decryption"] * len(decryption)
+})
 
-axs[0].hist(encryption, label="# Cycles")
-axs[1].hist(decryption, label="# Cycles")
+fig, axs = plt.subplots(1, 2, figsize=(10, 4))
 
+# Plot the histograms
+sns.histplot(data[data["Operation"] == "Encryption"], x="Cycles", ax=axs[0], kde=False, color=color1, label="# Cycles")
+sns.histplot(data[data["Operation"] == "Decryption"], x="Cycles", ax=axs[1], kde=False, color=color2, label="# Cycles")
+
+# Set titles, labels, and legends
 axs[0].set_title("Speed for encrypting using testvectors 2024.X")
 axs[1].set_title("Speed for decrypting using testvectors 2024.X")
-
-axs[0].legend()
-axs[1].legend()
 
 axs[0].set_xlabel("Amount of cycles")
 axs[1].set_xlabel("Amount of cycles")
 
-axs[0].set_ylabel("Occurences")
-axs[1].set_ylabel("Occurences")
+axs[0].set_ylabel("Occurrences")
+axs[1].set_ylabel("Occurrences")
 
-#fig.tight_layout()
+axs[0].legend()
+axs[1].legend()
 
+# Adjust layout and save the figure
+#plt.tight_layout()
 plt.savefig("encryption_decryption_perf.pdf")
-
-plt.show()
