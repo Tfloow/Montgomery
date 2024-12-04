@@ -111,10 +111,10 @@ plt.savefig("montgomery_report_perf.pdf")
 # REDO IMPLEMENTATION TO FIND THE RIGHT DATA
 ite = [1,2]
 Cycle_montgomery = [3097, 3097]
-Cycle = [100000, 100000] # for 16 bit exponents
-WNS = [-0.044, 0.07]
-LUTS = [8289, 9977]
-REG = [7251, 7234]
+Cycle = [106469, 106469] # for 16 bit exponents
+WNS = [-.333,.118]
+LUTS = [13886, 13886]
+REG = [13865, 13865]
 
 fig, axs = plt.subplots(1,2,figsize=(10, 4))
 
