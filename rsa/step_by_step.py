@@ -1,60 +1,139 @@
-# this is an estimation based on the 64 first and last bits of every operand
-a = 0xa958eb1ec7084cf83d25941ba30b0aadaad986839a3a8e3028503037e875bce4637cdd321ca3ffe3c39adb4dfbbc230d4c2237acc33f636f2b9f4edb9d9401a9c2b2a90f26c56cefe22d49eefd468bbcb82a645835a537a9b80c3b9a8b16e6f271eece2712b9d229dc7534b9512c9fe0ee4ec5642dcb0c51c75d6baa6b219b97
-b = 0x9cabe30bb78713ae0cff2f816a4fb7ca0633e5598cf4f6b2274bfa55522d4130ce5c7c664427aa56bb471ad1727d11dfa83162695e19fd434025a7893d04cceab19910ab60c1691dd2a5fb4f45ad6f685e98eca311cc388bb197e52df9b17776e84ef3121a773482cdc3dbfc548396abf3bf3dd70f217e4da5bda2e4eb76b197
-m = 0xe14accdd8d4576ec8485f5589055b1caca2ebf09486d8f1e7870695a5fd3754b497c7c7f85fd2c2494df65f34e8be4b6ce67ea5e430793519f94c1c64abff479ad99cea14fa1f042f6a3d1b73d549e1da1c62f7854d012c5065953008e8a32c34191f144894c87c4ed6869cd5368df5fca97a90eae185bada3244e021c3791d3
+import math
 
-c = 0
-
-print(f"2B   {hex(2*b)}")
-print(f"3B   {hex(3*b)}")
-print(f"2M   {hex(2*m)}")
-print(f"3M   {hex(3*m)}")
-
-
-for i in range(0,1023,2):
-    print(f"{'_':_<20} i = {i} {'_':_<20}")
-    mask = 0b11 << i
+def MultiPrecisionAddSub_1026(A, B, addsub):
+    # returns (A + B) mod 2^1026 if   addsub == "add"
+    #         (A - B) mod 2^1026 else
     
-    print(f"Operand A : {hex(c)}")
-    print(f"Operand B : {hex((((a & mask) >> i) * b))}")
-    print(f"Maks val  : {(((a & mask) >> i))}")
+    mask1026  = 2**1026 - 1
+    mask1027  = 2**1027 - 1
 
-    c = c + (((a & mask) >> i) * b)
-    
+    am     = A & mask1026
+    bm     = B & mask1026
 
-
-    print(f"First step : {hex(c)}")
-    print()
-
-    if(((c & 0b11) == 1) & ((m & 0b11) == 1) | ((c & 0b11) == 3) & ((m & 0b11) == 3)):
-        print(f"Operand A : {hex(c)}")
-        print(f"Operand B : {hex(3*m)}")
-        c = (c + 3*m) >> 2
-        print("First")
-    elif (((c & 0b11) == 2) & ((m & 0b11) == 1) | ((c & 0b11) == 2) & ((m & 0b11) == 3)):
-        print(f"Operand A : {hex(c)}")
-        print(f"Operand B : {hex(m)}")
-        c = (c + 2*m) >> 2
-        print("Second")
-    elif (((c & 0b11) == 3) & ((m & 0b11) == 1) | ((c & 0b11) == 1) & ((m & 0b11) == 3)):
-        print(f"Operand A : {hex(c)}")
-        print(f"Operand B : {hex(m)}")
-        c = (c + m) >> 2
-        print("Third")
+    if addsub == "add": 
+        r = (am + bm) 
     else:
-        c = c >> 2
-        print("Last")
-    print(f"Second step : {hex(c)}")
-    print()
-
-while(c > m):
-    print(f"{'_':_<20} Condition Subtraction {'_':_<20}")
-    print(f"Before step : {hex(c)}")
+        r = (am - bm)
     
-    c = c - m
+    return r & mask1027
 
-    print(f"After step : {hex(c)}")
-    print()
+def MontMul(A, B, M):
+    # Returns (A*B*Modinv(R,M)) mod M
+    
+    regA  = A
+    regB  = B
+    regC  = 0
+    regM  = M
 
-print(f"Finish : {hex(c)}")
-print()
+    for i in range(0,1024):
+        
+        if (regA % 2) == 0  : regC = regC
+        else                : regC = MultiPrecisionAddSub_1026(regC, regB, "add")
+        
+        if (regC % 2) == 0  : regC = regC >> 1
+        else                : regC = MultiPrecisionAddSub_1026(regC, regM, "add") >> 1
+    
+        regA = regA >> 1
+
+    while regC >= regM:
+        regC = MultiPrecisionAddSub_1026(regC, regM, "sub")
+    
+    return regC
+
+def MontMul(A, B, M, DBG):
+    # Returns (A*B*Modinv(R,M)) mod M
+    print(f"A : {A:02X}")
+    print(f"B : {B:02X}")
+    print(f"M : {M:02X}")
+    
+    regA  = A
+    regB  = B
+    regC  = 0
+    regM  = M
+
+    for i in range(0,1024):
+        
+        if (regA % 2) == 0  : regC = regC
+        else                : regC = MultiPrecisionAddSub_1026(regC, regB, "add")
+        
+        if (regC % 2) == 0  : regC = regC >> 1
+        else                : regC = MultiPrecisionAddSub_1026(regC, regM, "add") >> 1
+    
+        regA = regA >> 1
+
+    while regC >= regM:
+        regC = MultiPrecisionAddSub_1026(regC, regM, "sub")
+    
+    return regC
+
+def bitlen(n):
+    return int(math.log(n, 2)) + 1
+
+def bit(y,index):
+  bits   = [(y >> i) & 1 for i in range(1024)]
+  bitstr = ''.join([chr(sum([bits[i * 8 + j] << j for j in range(8)])) for i in range(1024 >> 3)])
+  return (ord(bitstr[index >> 3]) >> (index%8)) & 1
+
+def MontExp_MontPowerLadder(X, E, N):
+    # Returns (X^E) mod N
+    
+    R  = 2**1024
+    RN = R % N
+    R2N = (R*R) % N
+    A  = RN
+    X_tilde = MontMul(X,R2N,N)
+    t = bitlen(E)
+    for i in range(0,t):
+        if bit(E,t-i-1) == 1:
+            A       = MontMul(A,X_tilde,N)
+            X_tilde = MontMul(X_tilde,X_tilde,N)
+        else:
+            X_tilde = MontMul(A,X_tilde,N)
+            A       = MontMul(A,A,N)
+    A = MontMul(A,1,N)
+    return A
+
+def MontExp_MontPowerLadder(X, E, N, DBG):
+    # Returns (X^E) mod N
+    print(DBG)
+    R  = 2**1024
+    RN = R % N
+    R2N = (R*R) % N
+    A  = RN
+    X_tilde = MontMul(X,R2N,N, DBG)
+    print(f"X_tilde : {X_tilde:02X}")
+    t = bitlen(E)
+    for i in range(0,t):
+        print(f"{'_'*20:20} {i}")
+        print(t-i-1)
+        if bit(E,t-i-1) == 1:
+            print("First Condition")
+            print("CMD : 0x01")
+            A       = MontMul(A,X_tilde,N, DBG)
+            print(f"Result : {A:02X}")
+            print(f"{'_'*20:20}")
+            print("CMD : 0x0B")
+            X_tilde = MontMul(X_tilde,X_tilde,N, DBG)
+            print(f"Result : {X_tilde:02X}")
+        else:
+            print("Second Condition")
+            print("CMD : 0x0D")
+            X_tilde = MontMul(A,X_tilde,N, DBG)
+            print(f"Result : {X_tilde:02X}")
+            print(f"{'_'*20:20}")
+            print("CMD : 0x03")
+            A       = MontMul(A,A,N, DBG)
+            print(f"Result : {A:02X}")
+
+        #break
+    print(f"{'_'*20:20}")
+    A = MontMul(A,1,N, DBG)
+    print(f"Result : {A:02X}")
+    return A
+
+if __name__ == "__main__":
+    X = 0x8eb60bf5e833600adfdd8a07dad62ff16d598dc59c7dbc9832ece3c7b055e0b0d54dfc4fa8d0087b73b23009adb1e6f246d0fccbefb98465b8de04119df17a8179638497c4cef4e3f9c9c2efa40fef1eb20079da4deda86fcfeee16be329c697d3d7226b11a9378db6c466fd671397f0ad8a0fd6fe6a62b65d058af9433b2afe
+    E = 0x00009985
+    N = 0xccd61077400aba4c98a62f433339650adcf9069c6bb24dd60bba4028f693324978055a3d08714b05015e270b7556d71488695fd12f8272f1d520ac979d96440401d3de7ddddab60b458971b6e683fc3c3de09b8cdef188efe99045ab59000e06e5345506bc860be0a1fd8b703b3a20de58e314bf47a5e8142d275cd928c9249d
+
+    MontExp_MontPowerLadder(X,E,N, 1)
