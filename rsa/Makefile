@@ -1,5 +1,9 @@
 FLAGS=-Wextra -Wall -Wfloat-equal -Wundef -Wshadow -Wpointer-arith -Wcast-align -Wstrict-prototypes -Wstrict-overflow=5 -Wwrite-strings -Waggregate-return -Wcast-qual -Wswitch-default -Wswitch-enum -Wconversion -Wunreachable-code
 
+bit: bit_finder.c
+	gcc $? -o main $(FLAGS)
+	./main
+
 main: main.c
 	gcc $? -o main $(FLAGS)
 	./main.exe

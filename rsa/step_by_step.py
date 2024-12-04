@@ -105,6 +105,7 @@ def MontExp_MontPowerLadder(X, E, N, DBG):
     t = bitlen(E)
     for i in range(0,t):
         print(f"{'_'*20:20} {i}")
+        print(t-i-1)
         if bit(E,t-i-1) == 1:
             print("First Condition")
             print("CMD : 0x01")
