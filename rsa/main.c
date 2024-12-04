@@ -16,6 +16,7 @@ extern uint32_t N[32],    // modulus
 
 #define ISFLAGSET(REG,BIT) ( (REG & (1<<BIT)) ? 1 : 0 )
 #define SEND_MY_MESSAGE 0
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 
 void print_array_contents(uint32_t* src) {
   int i;
@@ -38,14 +39,14 @@ void write_to_buffer(uint32_t* message_buffer, char* message){
 
 void encode_message(uint32_t* m, char* message_to_send, uint32_t size, uint32_t blocks){
   /*
-  m               : the 128 bytes aligned buffer 
+  m               : the 128 bytes aligned buffer
   message_to_send : the full text we want to encrypt
   size            : amount of character in the message_to_send string
   blocks          : to keep track if we are at the first or more block of message
   */
   char sanitize_input[32*4] = {0};
   // write to the sanitize input
-  for(uint32_t j = 0; j < fmin(128, size - blocks*128); j++){
+  for(uint32_t j = 0; j < min(128, size - blocks*128); j++){
       sanitize_input[j] = message_to_send[blocks*128 + j];
   }
   write_to_buffer(m, sanitize_input);
@@ -204,12 +205,12 @@ int main() {
         HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
     }
 
-    
+
     // saves the length of exponent
     // HWreg[T]     = e[0];
     HWreg[T_LEN] = 16;
-    
-    if SEND_MY_MESSAGE{
+
+    if (SEND_MY_MESSAGE){
       char* my_message = "Hello World ! This is a test text for the RSA algorithm. This text is longer than 128 characters to check the splitting of message. Does it work ?";
       uint32_t size = (uint32_t) strlen(my_message);
       uint32_t amount_of_frame = (uint32_t) ceil((float) size/128);
@@ -231,7 +232,7 @@ int main() {
 
         HWreg[COMMAND] = 0x00;
 
-        printf("\r\nO_Data:\r\n"); 
+        printf("\r\nO_Data:\r\n");
         print_array_contents(odata);
         printf("_______\n");
       }
