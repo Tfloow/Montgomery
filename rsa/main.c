@@ -22,7 +22,7 @@ void print_array_contents(uint32_t* src) {
   int i;
   for (i=32-4; i>=0; i-=4)
     xil_printf("%08x %08x %08x %08x\n\r",
-      src[i+3], src[i+2], src[i+1], src[i]);
+                src[i+3], src[i+2], src[i+1], src[i]);
 }
 
 void compare_array_contents(uint32_t* res, uint32_t* obtained) {
@@ -38,7 +38,6 @@ void compare_array_contents(uint32_t* res, uint32_t* obtained) {
 
 uint32_t bit(uint32_t* E, uint32_t position){
   uint32_t right_part = E[position/32];
-
   return (right_part >> (position % 32)) & 0x1;
 }
 
@@ -132,229 +131,188 @@ int main() {
 
     if(DBG){
       printf("____\n");
-    printf("Status %08X\r\n", (unsigned int)HWreg[STATUS]);
-    printf("LSB_N %08X\r\n", (unsigned int)HWreg[LSB_N]);
-    printf("LSB_R_N %08X\r\n", (unsigned int)HWreg[LSB_R_N]);
-    printf("LSB_R2_N %08X\r\n", (unsigned int)HWreg[LSB_R2_N]);
-    printf("DMA 4 %08X\r\n", (unsigned int)HWreg[DMA_RX]);
-    printf("Loading %08X\r\n", (unsigned int)HWreg[LOADING]);
-    printf("State %08X\r\n", (unsigned int)HWreg[STATE]);
+      printf("Status %08X\r\n", (unsigned int)HWreg[STATUS]);
+      printf("LSB_N %08X\r\n", (unsigned int)HWreg[LSB_N]);
+      printf("LSB_R_N %08X\r\n", (unsigned int)HWreg[LSB_R_N]);
+      printf("LSB_R2_N %08X\r\n", (unsigned int)HWreg[LSB_R2_N]);
+      printf("DMA 4 %08X\r\n", (unsigned int)HWreg[DMA_RX]);
+      printf("Loading %08X\r\n", (unsigned int)HWreg[LOADING]);
+      printf("State %08X\r\n", (unsigned int)HWreg[STATE]);
     }
 
     // wait for the FPGA to be done
     while((HWreg[STATUS] & 0x01) == 0);
     HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
   }
-      // the message stays inside the DMA
-      // THIS VERSION WILL JUST RUN THE MONTGOMERY MULTIPLICATION IN HARDWARE AND THE REST IN SOFTWARE
-      /*
-      CHANGE TO THE API
-      COMMAND :
-        0b0001 : 0x01 : MontMul(DMA, X_tilde, N)
-        0b0011 : 0x03 : MontMul(DMA, DMA, N)
-        0b0101 : 0x05 : MontMul(DMA, 1, N)
-        Write to registers commands
-        0b1001 : 0x09 : MontMul(DMA, R2N, N)
-        0b1011 : 0x0B : MontMul(X_tilde, X_tilde, N)
-        0b1101 : 0x0D : MontMUl(DMA, X_tilde, N)
-     */
-    alignas(128) uint32_t X_tilde[32] = {0};
-    alignas(128) uint32_t A[32] = {0};
-    // Won't use memcpy just to avoid library dependencies
-    for(int count = 0; count < 32; count++){
-      A[count] = R_N[count];
-    }
-    // HERE IS THE START OF THE ALGORITHM
-    START_TIMING
-      // Running the montgomery Exponentiation
-      HWreg[RXADDR]  = (uint32_t) M;
+  // the message stays inside the DMA
+  // THIS VERSION WILL JUST RUN THE MONTGOMERY MULTIPLICATION IN HARDWARE AND THE REST IN SOFTWARE
+  /*
+  CHANGE TO THE API
+  COMMAND :
+    0b0001 : 0x01 : MontMul(DMA, X_tilde, N)
+    0b0011 : 0x03 : MontMul(DMA, DMA, N)
+    0b0101 : 0x05 : MontMul(DMA, 1, N)
+    Write to registers commands
+    0b1001 : 0x09 : MontMul(DMA, R2N, N)
+    0b1011 : 0x0B : MontMul(X_tilde, X_tilde, N)
+    0b1101 : 0x0D : MontMUl(DMA, X_tilde, N)
+  */
+  alignas(128) uint32_t X_tilde[32] = {0};
+  alignas(128) uint32_t A[32] = {0};
+  // Won't use memcpy just to avoid library dependencies
+  for(int count = 0; count < 32; count++){
+    A[count] = R_N[count];
+  }
+  // HERE IS THE START OF THE ALGORITHM
+  START_TIMING
+  // Running the montgomery Exponentiation
+  HWreg[RXADDR]  = (uint32_t) M;
+  HWreg[TXADDR]  = (uint32_t) X_tilde;
+  // Launch Montgomery Multiplication
+  HWreg[COMMAND] = 0x09;
+  while((HWreg[STATUS] & 0x01) == 0);
+  HWreg[COMMAND] = 0x00;
+
+
+
+  for(int i = 0; i < e_len; i++){
+    if(bit(e, e_len - i - 1)){ // check the exponent to run the Power ladder algorithm
+      // do for R_N
+      // Launch Montgomery Multiplication
+      HWreg[RXADDR]  = (uint32_t) A;
+      HWreg[TXADDR]  = (uint32_t) A;
+      HWreg[COMMAND] = 0x01;
+      while((HWreg[STATUS] & 0x01) == 0);
+      HWreg[COMMAND] = 0x00;
+
+      HWreg[RXADDR]  = (uint32_t) X_tilde;
       HWreg[TXADDR]  = (uint32_t) X_tilde;
+      // do for X_tilde
       // Launch Montgomery Multiplication
-      HWreg[COMMAND] = 0x09;
+      HWreg[COMMAND] = 0x0B;
+      while((HWreg[STATUS] & 0x01) == 0);
+      HWreg[COMMAND] = 0x00;
+    }else{
+      // do for X_tilde
+      // Launch Montgomery Multiplication
+      HWreg[RXADDR]  = (uint32_t) X_tilde;
+      HWreg[TXADDR]  = (uint32_t) X_tilde;
+      HWreg[COMMAND] = 0x0D;
       while((HWreg[STATUS] & 0x01) == 0);
       HWreg[COMMAND] = 0x00;
 
 
-
-      for(int i = 0; i < e_len; i++){
-    	//printf("[LOG] bits value step by step : %ld \n", bit(e, e_len - i - 1));
-    	//print_array_contents(A);
-    	//printf("____\n");
-    	//print_array_contents(X_tilde);
-        if(bit(e, e_len - i - 1)){ // check the exponent to run the Power ladder algorithm
-          // do for R_N
-          // Launch Montgomery Multiplication
-            HWreg[RXADDR]  = (uint32_t) A;
-            HWreg[TXADDR]  = (uint32_t) A;
-
-          HWreg[COMMAND] = 0x01;
-          while((HWreg[STATUS] & 0x01) == 0);
-          HWreg[COMMAND] = 0x00;
-
-	      HWreg[RXADDR]  = (uint32_t) X_tilde;
-	      HWreg[TXADDR]  = (uint32_t) X_tilde;
-
-
-
-          // do for X_tilde
-          // Launch Montgomery Multiplication
-          HWreg[COMMAND] = 0x0B;
-          while((HWreg[STATUS] & 0x01) == 0);
-          HWreg[COMMAND] = 0x00;
-
-
-        }else{
-          // do for X_tilde
-          // Launch Montgomery Multiplication
-  	      HWreg[RXADDR]  = (uint32_t) X_tilde;
-  	      HWreg[TXADDR]  = (uint32_t) X_tilde;
-
-          HWreg[COMMAND] = 0x0D;
-          while((HWreg[STATUS] & 0x01) == 0);
-          HWreg[COMMAND] = 0x00;
-
-
-		      HWreg[RXADDR]  = (uint32_t) A;
-		      HWreg[TXADDR]  = (uint32_t) A;
-
-          // do for R_N
-          // Launch Montgomery Multiplication
-          HWreg[COMMAND] = 0x03;
-          while((HWreg[STATUS] & 0x01) == 0);
-          HWreg[COMMAND] = 0x00;
-        }
-        //odata = A;
-      }
-
-      // do the final operation
+      HWreg[RXADDR]  = (uint32_t) A;
+      HWreg[TXADDR]  = (uint32_t) A;
+      // do for R_N
       // Launch Montgomery Multiplication
-	  HWreg[RXADDR]  = (uint32_t) A;
-	  HWreg[TXADDR]  = (uint32_t) A;
+      HWreg[COMMAND] = 0x03;
+      while((HWreg[STATUS] & 0x01) == 0);
+      HWreg[COMMAND] = 0x00;
+    }
+  }
 
-      HWreg[COMMAND] = 0x05;
+  // do the final operation
+  // Launch Montgomery Multiplication
+  HWreg[RXADDR]  = (uint32_t) A;
+  HWreg[TXADDR]  = (uint32_t) A;
+
+  HWreg[COMMAND] = 0x05;
+  while((HWreg[STATUS] & 0x01) == 0);
+  HWreg[COMMAND] = 0x00;
+
+  STOP_TIMING
+  // END OF THE ALGORITHM
+  printf("STATUS 0 %08X | Done %d | Idle %d | Error %d \r\n", (unsigned int)HWreg[STATUS], ISFLAGSET(HWreg[STATUS],0), ISFLAGSET(HWreg[STATUS],1), ISFLAGSET(HWreg[STATUS],2));
+  printf("LSB_N 1 %08X\r\n", (unsigned int)HWreg[1]);
+  printf("LSB_R_N 2 %08X\r\n", (unsigned int)HWreg[2]);
+  printf("LSB_R2_N 3 %08X\r\n", (unsigned int)HWreg[3]);
+  printf("DMA 4 %08X\r\n", (unsigned int)HWreg[4]);
+  printf("Loading 5 %08X\r\n", (unsigned int)HWreg[5]);
+  printf("State 6 %08X\r\n", (unsigned int)HWreg[6]);
+  printf("Load 7 %08X\r\n", (unsigned int)HWreg[7]);
+
+  // print the result against the output datas
+  printf("\r\nExpected:\r\n"); print_array_contents(res);
+  printf("\r\nGot:\r\n"); print_array_contents(A);
+  compare_array_contents(res,A);
+
+
+  // Decrypt
+  START_TIMING
+  // Running the montgomery Exponentiation
+  HWreg[RXADDR]  = (uint32_t) A;
+  HWreg[TXADDR]  = (uint32_t) X_tilde;
+  // Launch Montgomery Multiplication
+  HWreg[COMMAND] = 0x09;
+  while((HWreg[STATUS] & 0x01) == 0);
+  HWreg[COMMAND] = 0x00;
+
+  // Don't forget to reset A
+  for(int count = 0; count < 32; count++){
+    A[count] = R_N[count];
+  }
+
+  for(int i = 0; i < d_len; i++){
+    if(bit(d, d_len - i - 1)){ // check the exponent to run the Power ladder algorithm
+      // do for R_N
+      // Launch Montgomery Multiplication
+      HWreg[RXADDR]  = (uint32_t) A;
+      HWreg[TXADDR]  = (uint32_t) A;
+      HWreg[COMMAND] = 0x01;
       while((HWreg[STATUS] & 0x01) == 0);
       HWreg[COMMAND] = 0x00;
 
-      STOP_TIMING
-	  // END OF THE ALGORITHM
-      printf("STATUS 0 %08X | Done %d | Idle %d | Error %d \r\n", (unsigned int)HWreg[STATUS], ISFLAGSET(HWreg[STATUS],0), ISFLAGSET(HWreg[STATUS],1), ISFLAGSET(HWreg[STATUS],2));
-      printf("LSB_N 1 %08X\r\n", (unsigned int)HWreg[1]);
-      printf("LSB_R_N 2 %08X\r\n", (unsigned int)HWreg[2]);
-      printf("LSB_R2_N 3 %08X\r\n", (unsigned int)HWreg[3]);
-      printf("DMA 4 %08X\r\n", (unsigned int)HWreg[4]);
-      printf("Loading 5 %08X\r\n", (unsigned int)HWreg[5]);
-      printf("State 6 %08X\r\n", (unsigned int)HWreg[6]);
-      printf("Load 7 %08X\r\n", (unsigned int)HWreg[7]);
+      HWreg[RXADDR]  = (uint32_t) X_tilde;
+      HWreg[TXADDR]  = (uint32_t) X_tilde;
+      // do for X_tilde
+      // Launch Montgomery Multiplication
+      HWreg[COMMAND] = 0x0B;
+      while((HWreg[STATUS] & 0x01) == 0);
+      HWreg[COMMAND] = 0x00;
+    }else{
+      // do for X_tilde
+      // Launch Montgomery Multiplication
+      HWreg[RXADDR]  = (uint32_t) X_tilde;
+      HWreg[TXADDR]  = (uint32_t) X_tilde;
+      HWreg[COMMAND] = 0x0D;
+      while((HWreg[STATUS] & 0x01) == 0);
+      HWreg[COMMAND] = 0x00;
 
 
-      // print the result against the output datas
-      printf("\r\nExpected:\r\n"); print_array_contents(res);
-      printf("\r\nGot:\r\n"); print_array_contents(A);
-      compare_array_contents(res,A);
+      HWreg[RXADDR]  = (uint32_t) A;
+      HWreg[TXADDR]  = (uint32_t) A;
+      // do for R_N
+      // Launch Montgomery Multiplication
+      HWreg[COMMAND] = 0x03;
+      while((HWreg[STATUS] & 0x01) == 0);
+      HWreg[COMMAND] = 0x00;
+    }
+  }
 
+  // do the final operation
+  // Launch Montgomery Multiplication
+  HWreg[RXADDR]  = (uint32_t) A;
+  HWreg[TXADDR]  = (uint32_t) A;
+  HWreg[COMMAND] = 0x05;
+  while((HWreg[STATUS] & 0x01) == 0);
+  HWreg[COMMAND] = 0x00;
 
-      // Decrypt
-          // the message stays inside the DMA
-          // THIS VERSION WILL JUST RUN THE MONTGOMERY MULTIPLICATION IN HARDWARE AND THE REST IN SOFTWARE
-          /*
-          CHANGE TO THE API
-          COMMAND :
-            0b0001 : 0x01 : MontMul(DMA, X_tilde, N)
-            0b0011 : 0x03 : MontMul(DMA, DMA, N)
-            0b0101 : 0x05 : MontMul(DMA, 1, N)
-            Write to registers commands
-            0b1001 : 0x09 : MontMul(DMA, R2N, N)
-            0b1011 : 0x0B : MontMul(X_tilde, X_tilde, N)
-            0b1101 : 0x0D : MontMUl(DMA, X_tilde, N)
-         */
-        // HERE IS THE START OF THE ALGORITHM
-        START_TIMING
-          // Running the montgomery Exponentiation
-          HWreg[RXADDR]  = (uint32_t) A;
-          HWreg[TXADDR]  = (uint32_t) X_tilde;
-          // Launch Montgomery Multiplication
-          HWreg[COMMAND] = 0x09;
-          while((HWreg[STATUS] & 0x01) == 0);
-          HWreg[COMMAND] = 0x00;
+  STOP_TIMING
+  // END OF THE ALGORITHM
+  printf("STATUS 0 %08X | Done %d | Idle %d | Error %d \r\n", (unsigned int)HWreg[STATUS], ISFLAGSET(HWreg[STATUS],0), ISFLAGSET(HWreg[STATUS],1), ISFLAGSET(HWreg[STATUS],2));
+  printf("LSB_N 1 %08X\r\n", (unsigned int)HWreg[1]);
+  printf("LSB_R_N 2 %08X\r\n", (unsigned int)HWreg[2]);
+  printf("LSB_R2_N 3 %08X\r\n", (unsigned int)HWreg[3]);
+  printf("DMA 4 %08X\r\n", (unsigned int)HWreg[4]);
+  printf("Loading 5 %08X\r\n", (unsigned int)HWreg[5]);
+  printf("State 6 %08X\r\n", (unsigned int)HWreg[6]);
+  printf("Load 7 %08X\r\n", (unsigned int)HWreg[7]);
 
-          // Don't forget to reset A
-          for(int count = 0; count < 32; count++){
-            A[count] = R_N[count];
-          }
-
-          for(int i = 0; i < d_len; i++){
-        	//printf("[LOG] bits value step by step : %ld \n", bit(e, e_len - i - 1));
-        	//print_array_contents(A);
-        	//printf("____\n");
-        	//print_array_contents(X_tilde);
-            if(bit(d, d_len - i - 1)){ // check the exponent to run the Power ladder algorithm
-              // do for R_N
-              // Launch Montgomery Multiplication
-                HWreg[RXADDR]  = (uint32_t) A;
-                HWreg[TXADDR]  = (uint32_t) A;
-
-              HWreg[COMMAND] = 0x01;
-              while((HWreg[STATUS] & 0x01) == 0);
-              HWreg[COMMAND] = 0x00;
-
-    	      HWreg[RXADDR]  = (uint32_t) X_tilde;
-    	      HWreg[TXADDR]  = (uint32_t) X_tilde;
-
-
-
-              // do for X_tilde
-              // Launch Montgomery Multiplication
-              HWreg[COMMAND] = 0x0B;
-              while((HWreg[STATUS] & 0x01) == 0);
-              HWreg[COMMAND] = 0x00;
-
-
-            }else{
-              // do for X_tilde
-              // Launch Montgomery Multiplication
-      	      HWreg[RXADDR]  = (uint32_t) X_tilde;
-      	      HWreg[TXADDR]  = (uint32_t) X_tilde;
-
-              HWreg[COMMAND] = 0x0D;
-              while((HWreg[STATUS] & 0x01) == 0);
-              HWreg[COMMAND] = 0x00;
-
-
-    		      HWreg[RXADDR]  = (uint32_t) A;
-    		      HWreg[TXADDR]  = (uint32_t) A;
-
-              // do for R_N
-              // Launch Montgomery Multiplication
-              HWreg[COMMAND] = 0x03;
-              while((HWreg[STATUS] & 0x01) == 0);
-              HWreg[COMMAND] = 0x00;
-            }
-            //odata = A;
-          }
-
-          // do the final operation
-          // Launch Montgomery Multiplication
-    	  HWreg[RXADDR]  = (uint32_t) A;
-    	  HWreg[TXADDR]  = (uint32_t) A;
-
-          HWreg[COMMAND] = 0x05;
-          while((HWreg[STATUS] & 0x01) == 0);
-          HWreg[COMMAND] = 0x00;
-
-          STOP_TIMING
-		  // END OF THE ALGORITHM
-	      printf("STATUS 0 %08X | Done %d | Idle %d | Error %d \r\n", (unsigned int)HWreg[STATUS], ISFLAGSET(HWreg[STATUS],0), ISFLAGSET(HWreg[STATUS],1), ISFLAGSET(HWreg[STATUS],2));
-	      printf("LSB_N 1 %08X\r\n", (unsigned int)HWreg[1]);
-	      printf("LSB_R_N 2 %08X\r\n", (unsigned int)HWreg[2]);
-	      printf("LSB_R2_N 3 %08X\r\n", (unsigned int)HWreg[3]);
-	      printf("DMA 4 %08X\r\n", (unsigned int)HWreg[4]);
-	      printf("Loading 5 %08X\r\n", (unsigned int)HWreg[5]);
-	      printf("State 6 %08X\r\n", (unsigned int)HWreg[6]);
-	      printf("Load 7 %08X\r\n", (unsigned int)HWreg[7]);
-
-      printf("\r\nExpected:\r\n"); print_array_contents(M);
-      printf("\r\nGot:\r\n"); print_array_contents(A);
-      compare_array_contents(A,M);
+  printf("\r\nExpected:\r\n"); print_array_contents(M);
+  printf("\r\nGot:\r\n"); print_array_contents(A);
+  compare_array_contents(A,M);
+  
   cleanup_platform();
 
   return 0;
