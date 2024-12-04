@@ -41,9 +41,6 @@ module rsa (
   wire [31:0] status;
   assign rout0 = status; // use rout0 as status
 
-  assign rout4 = dma_rx_address;  // not used
-  assign rout5 = loading_data;  // not used
-  assign rout7 = 32'b0;  // not used
   
     // define status
   localparam
@@ -89,11 +86,7 @@ module rsa (
     // connect all registers to the dma rx data
     assign save_input = dma_rx_data;
     
-    // DBG - Write the LSB to those output register
-    assign rout1 = N_Q;  
-    //assign rout2 = R_N_Q; 
-    assign rout3 = R2_N_Q;  
-    assign rout6 = state;  // not used
+
 
       
   //// RSA PART
@@ -107,8 +100,8 @@ module rsa (
 
     // X_tilde
     wire X_tilde_en;
-    wire [1023:0] X_tilde_D;
     reg [1023:0] X_tilde_Q;
+    wire [1023:0] X_tilde_D;
     always @(posedge clk) begin
         if(X_tilde_en)
             X_tilde_Q <= X_tilde_D;
@@ -117,9 +110,10 @@ module rsa (
     // A
     wire A_en;
     reg [1023:0] A_Q;
+    wire [1023:0] A_D;
     always @(posedge clk) begin
         if(A_en)
-            A_Q <= dma_rx_data;
+            A_Q <= A_D;
     end
       
     /*
@@ -146,13 +140,15 @@ module rsa (
     
     wire isCmdComp = isXtildeMM || isDMAMM || isOne || isR_2NMM_SAVE || isX_TildeMM_SAVE || isDMA_SAVE;
     wire isCmdIdle = ~isCmdComp;
-    wire isSave = isR_2NMM_SAVE || isX_TildeMM_SAVE || isDMA_SAVE;
+    wire saveXTilde = isR_2NMM_SAVE || isX_TildeMM_SAVE || isDMA_SAVE;
+    wire saveA = isXtildeMM || isDMAMM || isOne;
     
     // When we need to update the X_tilde
-    assign X_tilde_en = isSave & (dma_done || done_montgomery) & ~A_en;
-    assign X_tilde_D  = isR_2NMM_SAVE & ~done_montgomery ? dma_rx_data : result;
+    assign X_tilde_en = saveXTilde & dma_done;    
+    assign X_tilde_D  = (state != STATE_TX_WAIT && state != STATE_TX && state != STATE_DONE) ? dma_rx_data : result;
     
-    assign A_en = ~isR_2NMM_SAVE & dma_done;
+    assign A_en = saveA & dma_done;
+    assign A_D  = (state != STATE_TX_WAIT && state != STATE_TX && state != STATE_DONE) ? dma_rx_data : result;
 
     reg sent_signal;
     assign start_montgomery = ~sent_signal && state == STATE_COMPUTE;
@@ -160,12 +156,20 @@ module rsa (
     assign in_a = (isX_TildeMM_SAVE || isR_2NMM_SAVE) ? X_tilde_Q : A_Q;
     assign in_b = isDMAMM ? in_a : (isOne ? 1024'h1 : (isR_2NMM_SAVE ? R2_N_Q : X_tilde_Q)); 
     assign in_m = N_Q;
-    assign dma_tx_data = done_montgomery ? result : 1024'h0; // to avoid over writing
-    // NEED TO CHECK IF THIS PRECAUTION IS IMPORTANT ???
+    assign dma_tx_data = result; // to avoid over writing
     // I MAY USE TOOOOOO MANY LUTS LOL
   
   // command to check if receiving save data
   wire isCmdSave = (loading_data != 32'd0);
+  
+      // DBG - Write the LSB to those output register
+    assign rout1 = in_a[31:0];  
+    assign rout2 = in_b[31:0]; 
+    assign rout3 = in_m[31:0];  
+    assign rout4 = result[31:0];  // not used
+    assign rout5 = A_Q[31:0];  // not used
+    assign rout6 = X_tilde_Q[31:0];  // not used
+    assign rout7 = dma_rx_data[31:0];  // not used
 
     
   always@(*) begin
@@ -198,7 +202,7 @@ module rsa (
       // A state for dummy computation for this example. Because this
       // computation takes only single cycle, go to TX state immediately
       STATE_COMPUTE : begin
-        next_state <= (done_montgomery) ? (isSave ? STATE_DONE : STATE_TX ): STATE_COMPUTE; // won't stop until montgomery is good
+        next_state <= (done_montgomery) ? STATE_TX : STATE_COMPUTE; // won't stop until montgomery is good
       end
 
       // Wait, if dma is not idle. Otherwise, start dma operation and go to

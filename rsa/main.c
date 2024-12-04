@@ -145,46 +145,43 @@ int main() {
         0b1011 : 0x0B : MontMul(X_tilde, X_tilde, N)
         0b1101 : 0x0D : MontMUl(DMA, X_tilde, N)
      */
-
+    alignas(128) uint32_t X_tilde[32] = {0};
       // Running the montgomery Exponentiation
       HWreg[RXADDR]  = (uint32_t) M;
+      HWreg[TXADDR]  = (uint32_t) X_tilde;
       // Launch Montgomery Multiplication
       HWreg[COMMAND] = 0x09;
-		printf("A : %08X\n",HWreg[1]);
-		printf("B : %08X\n",HWreg[2]);
-		printf("M : %08X\n",HWreg[3]);
       while((HWreg[STATUS] & 0x01) == 0);
-      printf("A : %08X\n",HWreg[1]);
       HWreg[COMMAND] = 0x00;
-      printf("A : %08X\n",HWreg[1]);
-
 
       alignas(128) uint32_t A[32] = {0};
       // Won't use memcpy just to avoid library dependencies
       for(int count = 0; count < 32; count++){
         A[count] = R_N[count];
       }
-      HWreg[RXADDR]  = (uint32_t) A;
-      HWreg[TXADDR]  = (uint32_t) odata;
 
-      for(int i = 0; i < 2; i++){
-    	printf("[LOG] bits value step by step : %ld \n", bit(e, e_len - i - 1));
+
+
+
+      for(int i = 0; i < e_len; i++){
+    	//printf("[LOG] bits value step by step : %ld \n", bit(e, e_len - i - 1));
+    	//print_array_contents(A);
+    	//printf("____\n");
+    	//print_array_contents(X_tilde);
         if(bit(e, e_len - i - 1)){ // check the exponent to run the Power ladder algorithm
           // do for R_N
           // Launch Montgomery Multiplication
-        	printf("A : %08X\n",HWreg[1]);
-        	printf("B : %08X\n",HWreg[2]);
-        	printf("M : %08X\n",HWreg[3]);
-
+            HWreg[RXADDR]  = (uint32_t) A;
+            HWreg[TXADDR]  = (uint32_t) A;
 
           HWreg[COMMAND] = 0x01;
           while((HWreg[STATUS] & 0x01) == 0);
           HWreg[COMMAND] = 0x00;
 
-          printf("RES : %08X\n",HWreg[4]);
-			printf("A : %08X\n",HWreg[1]);
-			printf("B : %08X\n",HWreg[2]);
-			printf("M : %08X\n",HWreg[3]);
+	      HWreg[RXADDR]  = (uint32_t) X_tilde;
+	      HWreg[TXADDR]  = (uint32_t) X_tilde;
+
+
 
           // do for X_tilde
           // Launch Montgomery Multiplication
@@ -192,41 +189,38 @@ int main() {
           while((HWreg[STATUS] & 0x01) == 0);
           HWreg[COMMAND] = 0x00;
 
-          printf("RES : %08X\n",HWreg[4]);
 
         }else{
           // do for X_tilde
           // Launch Montgomery Multiplication
-        	printf("A : %08X\n",HWreg[1]);
-        	printf("B : %08X\n",HWreg[2]);
-        	printf("M : %08X\n",HWreg[3]);
+  	      HWreg[RXADDR]  = (uint32_t) X_tilde;
+  	      HWreg[TXADDR]  = (uint32_t) X_tilde;
+
           HWreg[COMMAND] = 0x0D;
           while((HWreg[STATUS] & 0x01) == 0);
           HWreg[COMMAND] = 0x00;
 
-          printf("RES : %08X\n",HWreg[4]);
-			printf("A : %08X\n",HWreg[1]);
-			printf("B : %08X\n",HWreg[2]);
-			printf("M : %08X\n",HWreg[3]);
+
+		      HWreg[RXADDR]  = (uint32_t) A;
+		      HWreg[TXADDR]  = (uint32_t) A;
 
           // do for R_N
           // Launch Montgomery Multiplication
           HWreg[COMMAND] = 0x03;
           while((HWreg[STATUS] & 0x01) == 0);
           HWreg[COMMAND] = 0x00;
-
-          printf("RES : %08X\n",HWreg[4]);
-
         }
-
-        // do the final operation
-        // Launch Montgomery Multiplication
-        HWreg[COMMAND] = 0x05;
-        while((HWreg[STATUS] & 0x01) == 0);
-        HWreg[COMMAND] = 0x00;
-
         //odata = A;
       }
+
+      // do the final operation
+      // Launch Montgomery Multiplication
+	  HWreg[RXADDR]  = (uint32_t) A;
+	  HWreg[TXADDR]  = (uint32_t) A;
+
+      HWreg[COMMAND] = 0x05;
+      while((HWreg[STATUS] & 0x01) == 0);
+      HWreg[COMMAND] = 0x00;
 
       STOP_TIMING
       printf("STATUS 0 %08X | Done %d | Idle %d | Error %d \r\n", (unsigned int)HWreg[STATUS], ISFLAGSET(HWreg[STATUS],0), ISFLAGSET(HWreg[STATUS],1), ISFLAGSET(HWreg[STATUS],2));
