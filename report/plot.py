@@ -197,3 +197,46 @@ axs[1].legend()
 # Adjust layout and save the figure
 #plt.tight_layout()
 plt.savefig("encryption_decryption_perf.pdf")
+
+# Loading and Sending
+
+loading = [734,818,724,824,735,731,738,736,734,824,837,925,737,818,817,815,816,804,816,804,810,935,816,804,921,804,816,920,810,804,813,801,734,728,814,710,813,830,810,818,813,935,810,798,921,804,816,914,810,798,907,804]
+sending = []
+
+
+
+# Set the Seaborn style
+# sns.set_theme()
+sns.set_style(style="whitegrid")
+
+# Create subplots
+data = pd.DataFrame({
+    "Cycles": loading + sending,
+    "Operation": ["Loading DMA"] * len(loading) + ["Sending DMA"] * len(sending)
+})
+
+
+fig, axs = plt.subplots(1, 2, figsize=(10, 4))
+
+# Plot the histograms
+axs[0].set_xlim(0,1000)
+sns.histplot(data[data["Operation"] == "Loading DMA"], x="Cycles", ax=axs[0], kde=False, color=color1, label="# CPU Cycles")
+sns.histplot(data[data["Operation"] == "Sending DMA"], x="Cycles", ax=axs[1], kde=False, color=color2, label="# CPU Cycles")
+
+# Set titles, labels, and legends
+axs[0].set_title("Speed for sending 1024 bits & Instruction signal")
+axs[1].set_title("Speed for receiving 1024 bits")
+
+axs[0].set_xlabel("Amount of cycles")
+
+axs[1].set_xlabel("Amount of cycles")
+
+axs[0].set_ylabel("Occurrences")
+axs[1].set_ylabel("Occurrences")
+
+axs[0].legend()
+axs[1].legend()
+
+# Adjust layout and save the figure
+#plt.tight_layout()
+plt.savefig("loading_sending_perf.pdf")

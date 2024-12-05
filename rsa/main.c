@@ -15,7 +15,7 @@ extern uint32_t N[32],    // modulus
                 R2_N[32];// (2^1024)^2 mod N
 
 #define ISFLAGSET(REG,BIT) ( (REG & (1<<BIT)) ? 1 : 0 )
-#define SEND_MY_MESSAGE 0
+#define SEND_MY_MESSAGE 1
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
 #define COMMAND 0
@@ -85,11 +85,8 @@ void encode_message(uint32_t* m, char* message_to_send, uint32_t size, uint32_t 
   write_to_buffer(m, sanitize_input);
 }
 
-void encrypt(uint32_t* A, uint32_t* X_tilde, uint32_t* M, uint32_t* R_N, uint32_t* e, uint32_t e_len ){
-  // Won't use memcpy just to avoid library dependencies
-  for(int count = 0; count < 32; count++){
-    A[count] = R_N[count];
-  }
+void encrypt(volatile uint32_t* HWreg, uint32_t* A, uint32_t* X_tilde, uint32_t* M, uint32_t* R_N, uint32_t* e, uint32_t e_len ){
+
   // HERE IS THE START OF THE ALGORITHM
   // Running the montgomery Exponentiation
   HWreg[RXADDR]  = (uint32_t) M;
@@ -98,6 +95,11 @@ void encrypt(uint32_t* A, uint32_t* X_tilde, uint32_t* M, uint32_t* R_N, uint32_
   HWreg[COMMAND] = 0x09;
   while((HWreg[STATUS] & 0x01) == 0);
   HWreg[COMMAND] = 0x00;
+
+  // Won't use memcpy just to avoid library dependencies
+  for(int count = 0; count < 32; count++){
+    A[count] = R_N[count];
+  }
 
   for(int i = 0; i < e_len; i++){
     if(bit(e, e_len - i - 1)){ // check the exponent to run the Power ladder algorithm
@@ -148,13 +150,13 @@ void encrypt(uint32_t* A, uint32_t* X_tilde, uint32_t* M, uint32_t* R_N, uint32_
 
 uint32_t my_strlen(char* string){
   // I know this is the dumbest idea to do a custom strlen but IDK if we have string.h library
-  // Please COSIC be nice and don't do buffer overflow pleaseeeeee 
+  // Please COSIC be nice and don't do buffer overflow pleaseeeeee
   for(int i = 0; i < 1000; i++){
     if(string[i] == '\0'){
       return i;
     }
   }
-  return 0; // if issue
+  return 10001; // if issue
 }
 
 int main() {
@@ -196,24 +198,13 @@ int main() {
 
   // Proposed CSR for command : use 8 bits : 0bxxxx x used xxx used for number fed
   uint32_t* adress_list[3] = {N,e,R2_N};
-
   for(int i = 1; i <= 3; i+=2){ // skipping the R_N write cause no more need !!!!
+	START_TIMING
     HWreg[RXADDR] = (uint32_t) adress_list[i-1]; // store address idata in reg1
     HWreg[LOADING] = (uint32_t) 8 + i; // 0b1000 + i indicating the state and which datas are being loaded.
-
-    if(DBG){
-      printf("____\n");
-      printf("Status %08X\r\n", (unsigned int)HWreg[STATUS]);
-      printf("LSB_N %08X\r\n", (unsigned int)HWreg[LSB_N]);
-      printf("LSB_R_N %08X\r\n", (unsigned int)HWreg[LSB_R_N]);
-      printf("LSB_R2_N %08X\r\n", (unsigned int)HWreg[LSB_R2_N]);
-      printf("DMA 4 %08X\r\n", (unsigned int)HWreg[DMA_RX]);
-      printf("Loading %08X\r\n", (unsigned int)HWreg[LOADING]);
-      printf("State %08X\r\n", (unsigned int)HWreg[STATE]);
-    }
-
     // wait for the FPGA to be done
     while((HWreg[STATUS] & 0x01) == 0);
+    STOP_TIMING
     HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
   }
   // the message stays inside the DMA
@@ -232,8 +223,8 @@ int main() {
 
   if(SEND_MY_MESSAGE){
     printf("TO BE CREATED\n");
-    char* my_message = "Hello world ! This is a message that is longer than 128 characters. So we can also check if this handles longer string of character (hopefully). Can you decrypt it ?"
-    alignas(128) uint32_t message_buffer = {0};
+    char* my_message = "Hello world ! This is a message that is longer than 128 characters. So we can also check if this handles longer string of character (hopefully). Can you decrypt it ?";
+    alignas(128) uint32_t message_buffer[32] = {0};
     uint32_t size = my_strlen(my_message);
     uint32_t amount_of_frame = (uint32_t)  ((size-1)/128 + 1);
 
@@ -242,13 +233,19 @@ int main() {
 
     for(uint32_t blocks = 0; blocks < amount_of_frame; blocks++){
       encode_message(message_buffer, my_message,size,blocks);
+      printf("Message to send\n");
+      print_array_contents(message_buffer);
+      printf("____\n");
 
-      encrypt(A, X_tilde, message_buffer, R_N, e, e_len );
+      encrypt(HWreg, A, X_tilde, message_buffer, R_N, e, e_len );
       print_array_contents(A); // This should hold the encrypted message
       printf("____\n");
-      
-      encrypt(A, X_tilde, A, R_N, d, d_len );
+
+      encrypt(HWreg, A, X_tilde, A, R_N, d, d_len );
       print_array_contents(A); // This should hold the decrypted message
+
+      compare_array_contents(A,message_buffer);
+      printf("___________\n");
     }
 
   }else{
@@ -260,59 +257,7 @@ int main() {
     }
     // HERE IS THE START OF THE ALGORITHM
     START_TIMING
-    // Running the montgomery Exponentiation
-    HWreg[RXADDR]  = (uint32_t) M;
-    HWreg[TXADDR]  = (uint32_t) X_tilde;
-    // Launch Montgomery Multiplication
-    HWreg[COMMAND] = 0x09;
-    while((HWreg[STATUS] & 0x01) == 0);
-    HWreg[COMMAND] = 0x00;
-
-    for(int i = 0; i < e_len; i++){
-      if(bit(e, e_len - i - 1)){ // check the exponent to run the Power ladder algorithm
-        // do for R_N
-        // Launch Montgomery Multiplication
-        HWreg[RXADDR]  = (uint32_t) A;
-        HWreg[TXADDR]  = (uint32_t) A;
-        HWreg[COMMAND] = 0x01;
-        while((HWreg[STATUS] & 0x01) == 0);
-        HWreg[COMMAND] = 0x00;
-
-        HWreg[RXADDR]  = (uint32_t) X_tilde;
-        HWreg[TXADDR]  = (uint32_t) X_tilde;
-        // do for X_tilde
-        // Launch Montgomery Multiplication
-        HWreg[COMMAND] = 0x0B;
-        while((HWreg[STATUS] & 0x01) == 0);
-        HWreg[COMMAND] = 0x00;
-      }else{
-        // do for X_tilde
-        // Launch Montgomery Multiplication
-        HWreg[RXADDR]  = (uint32_t) X_tilde;
-        HWreg[TXADDR]  = (uint32_t) X_tilde;
-        HWreg[COMMAND] = 0x0D;
-        while((HWreg[STATUS] & 0x01) == 0);
-        HWreg[COMMAND] = 0x00;
-
-
-        HWreg[RXADDR]  = (uint32_t) A;
-        HWreg[TXADDR]  = (uint32_t) A;
-        // do for R_N
-        // Launch Montgomery Multiplication
-        HWreg[COMMAND] = 0x03;
-        while((HWreg[STATUS] & 0x01) == 0);
-        HWreg[COMMAND] = 0x00;
-      }
-    }
-
-    // do the final operation
-    // Launch Montgomery Multiplication
-    HWreg[RXADDR]  = (uint32_t) A;
-    HWreg[TXADDR]  = (uint32_t) A;
-
-    HWreg[COMMAND] = 0x05;
-    while((HWreg[STATUS] & 0x01) == 0);
-    HWreg[COMMAND] = 0x00;
+	encrypt(HWreg, A, X_tilde, M, R_N, e, e_len );
 
     STOP_TIMING
     // END OF THE ALGORITHM
@@ -333,64 +278,7 @@ int main() {
 
     // Decrypt
     START_TIMING
-    // Running the montgomery Exponentiation
-    HWreg[RXADDR]  = (uint32_t) A; // Here the A is the message at first
-    HWreg[TXADDR]  = (uint32_t) X_tilde;
-    // Launch Montgomery Multiplication
-    HWreg[COMMAND] = 0x09;
-    while((HWreg[STATUS] & 0x01) == 0);
-    HWreg[COMMAND] = 0x00;
-
-    // Don't forget to reset A
-    for(int count = 0; count < 32; count++){
-      A[count] = R_N[count]; // We reset A to the classic value of A = R_N
-    }
-
-    for(int i = 0; i < d_len; i++){
-      if(bit(d, d_len - i - 1)){ // check the exponent to run the Power ladder algorithm
-        // do for R_N
-        // Launch Montgomery Multiplication
-        HWreg[RXADDR]  = (uint32_t) A;
-        HWreg[TXADDR]  = (uint32_t) A;
-        HWreg[COMMAND] = 0x01;
-        while((HWreg[STATUS] & 0x01) == 0);
-        HWreg[COMMAND] = 0x00;
-
-        HWreg[RXADDR]  = (uint32_t) X_tilde;
-        HWreg[TXADDR]  = (uint32_t) X_tilde;
-        // do for X_tilde
-        // Launch Montgomery Multiplication
-        HWreg[COMMAND] = 0x0B;
-        while((HWreg[STATUS] & 0x01) == 0);
-        HWreg[COMMAND] = 0x00;
-      }else{
-        // do for X_tilde
-        // Launch Montgomery Multiplication
-        HWreg[RXADDR]  = (uint32_t) X_tilde;
-        HWreg[TXADDR]  = (uint32_t) X_tilde;
-        HWreg[COMMAND] = 0x0D;
-        while((HWreg[STATUS] & 0x01) == 0);
-        HWreg[COMMAND] = 0x00;
-
-
-        HWreg[RXADDR]  = (uint32_t) A;
-        HWreg[TXADDR]  = (uint32_t) A;
-        // do for R_N
-        // Launch Montgomery Multiplication
-        HWreg[COMMAND] = 0x03;
-        while((HWreg[STATUS] & 0x01) == 0);
-        HWreg[COMMAND] = 0x00;
-      }
-    }
-
-    // do the final operation
-    // Launch Montgomery Multiplication
-    HWreg[RXADDR]  = (uint32_t) A;
-    HWreg[TXADDR]  = (uint32_t) A;
-    HWreg[COMMAND] = 0x05;
-    while((HWreg[STATUS] & 0x01) == 0);
-    HWreg[COMMAND] = 0x00;
-
+	encrypt(HWreg, A, X_tilde, A, R_N, d, d_len );
     STOP_TIMING
     // END OF THE ALGORITHM
     printf("STATUS 0 %08X | Done %d | Idle %d | Error %d \r\n", (unsigned int)HWreg[STATUS], ISFLAGSET(HWreg[STATUS],0), ISFLAGSET(HWreg[STATUS],1), ISFLAGSET(HWreg[STATUS],2));
@@ -406,7 +294,7 @@ int main() {
     printf("\r\nGot:\r\n"); print_array_contents(A);
     compare_array_contents(A,M);
   }
-  
+
   cleanup_platform();
 
   return 0;
