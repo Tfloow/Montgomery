@@ -96,7 +96,13 @@ module rsa (
     wire [1023:0] in_m;
     wire [1023:0] result;
     wire done_montgomery;
-    montgomery mont(clk, resetn, start_montgomery, in_a, in_b, in_m, result, done_montgomery);
+    montgomery mont_A(clk, resetn, start_montgomery, in_a, in_b, in_m, result, done_montgomery);
+    wire [1023:0] in_a_X_tilde;
+    wire [1023:0] in_b_X_tilde;
+    wire [1023:0] in_m_X_tilde;
+    wire [1023:0] result_X_tilde;
+    wire done_montgomery_X_tilde;
+    montgomery mont_X_Tilde(clk, resetn, start_montgomery, in_a_X_tilde, in_b_X_tilde, in_m_X_tilde, result_X_tilde, done_montgomery_X_tilde);
 
     // X_tilde
     wire X_tilde_en;
@@ -142,21 +148,38 @@ module rsa (
     wire isCmdIdle = ~isCmdComp;
     wire saveXTilde = isR_2NMM_SAVE || isX_TildeMM_SAVE || isDMA_SAVE;
     wire saveA = isXtildeMM || isDMAMM || isOne;
+
+    reg montgomery_1_done;
+    reg montgomery_done;
     
     // When we need to update the X_tilde
-    assign X_tilde_en = saveXTilde & dma_done;    
-    assign X_tilde_D  = (state != STATE_TX_WAIT && state != STATE_TX && state != STATE_DONE) ? dma_rx_data : result;
+    /*
+    What behavior I want ?
+    EN : I want it high when isR_2MM_SAVE is high and dma is done. But also at each time the two montgomery are finished
+    D  : When the first case of enabled is high, I want to read from the DMA. When it's the second I want to read from result_X_tilde
+    */
+    assign X_tilde_en = (isR_2MM_SAVE & dma_done) || montgomery_done;    
+    assign X_tilde_D  = (isR_2NMM_SAVE && state != STATE_TX_WAIT && state != STATE_TX && state != STATE_DONE) ? dma_rx_data : result_X_tilde;
     
-    assign A_en = saveA & dma_done;
+    /*
+    What behavior I want ?
+    EN : I want it high when I start any operation. But also at each time the two montgomery are finished
+    D  : When the first case of enabled is high, I want to read from the DMA. When it's the second I want to read from result_X_tilde
+    */
+    assign A_en = dma_done;
     assign A_D  = (state != STATE_TX_WAIT && state != STATE_TX && state != STATE_DONE) ? dma_rx_data : result;
 
     reg sent_signal;
     assign start_montgomery = ~sent_signal && state == STATE_COMPUTE;
 
-    assign in_a = (isX_TildeMM_SAVE || isR_2NMM_SAVE) ? X_tilde_Q : A_Q;
-    assign in_b = isDMAMM ? in_a : (isOne ? 1024'h1 : (isR_2NMM_SAVE ? R2_N_Q : X_tilde_Q)); 
+    assign in_a = A_Q;
+    assign in_b = isDMAMM ? in_a : (isOne ? 1024'h1 : X_tilde_Q); 
     assign in_m = N_Q;
     assign dma_tx_data = result; // to avoid over writing
+
+    assign in_a_X_tilde = isR_2NMM_SAVE ? X_tilde_Q : A_Q;
+    assign in_b_X_tilde = isR_2NMM_SAVE ? R2_N_Q : X_tilde_Q; 
+    assign in_m_X_tilde = N_Q;
     // I MAY USE TOOOOOO MANY LUTS LOL
   
   // command to check if receiving save data
