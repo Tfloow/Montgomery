@@ -270,9 +270,9 @@ module tb_rsa_wrapper();
     // Starting RSA
     // Prepare the DMA with A
     reg_write(RXADDR, M1_ADDR);
-    reg_write(TXADDR, X_TILDE_ADDR);
+    reg_write(TXADDR, X_TILDE_ADDR); // not used
     
-    reg_write(COMMAND, 32'h00000009);
+    reg_write(COMMAND, 32'h00000001);
     // Poll Done Signal
     reg_read(COMMAND, reg_status);
     while (reg_status[0]==1'b0) // check LSB status
@@ -291,21 +291,7 @@ module tb_rsa_wrapper();
         reg_write(RXADDR, A_ADDR);
         reg_write(TXADDR, A_ADDR);
         
-        reg_write(COMMAND, 32'h00000001);
-        // Poll Done Signal
-        reg_read(COMMAND, reg_status);
-        while (reg_status[0]==1'b0) // check LSB status
-        begin
-          #`LONG_WAIT;
-          reg_read(COMMAND, reg_status);
-        end
-        reg_write(COMMAND, 32'h00000000); // stop everything
-        
-        // Prepare the DMA with X_tilde
-        reg_write(RXADDR, X_TILDE_ADDR);
-        reg_write(TXADDR, X_TILDE_ADDR);
-
-        reg_write(COMMAND, 32'h0000000B);
+        reg_write(COMMAND, 32'h00000003);
         // Poll Done Signal
         reg_read(COMMAND, reg_status);
         while (reg_status[0]==1'b0) // check LSB status
@@ -319,24 +305,10 @@ module tb_rsa_wrapper();
         $display("Second Condition");
         
         // Prepare the DMA with X_tilde
-        reg_write(RXADDR, X_TILDE_ADDR);
-        reg_write(TXADDR, X_TILDE_ADDR);
-        
-        reg_write(COMMAND, 32'h0000000D);
-        // Poll Done Signal
-        reg_read(COMMAND, reg_status);
-        while (reg_status[0]==1'b0) // check LSB status
-        begin
-          #`LONG_WAIT;
-          reg_read(COMMAND, reg_status);
-        end
-        reg_write(COMMAND, 32'h00000000); // stop everything
-        
-        // Prepare the DMA with A
         reg_write(RXADDR, A_ADDR);
         reg_write(TXADDR, A_ADDR);
-
-        reg_write(COMMAND, 32'h00000003);        
+        
+        reg_write(COMMAND, 32'h00000005);
         // Poll Done Signal
         reg_read(COMMAND, reg_status);
         while (reg_status[0]==1'b0) // check LSB status
@@ -353,7 +325,7 @@ module tb_rsa_wrapper();
     reg_write(TXADDR, A_ADDR);
     
     // Starting RSA
-    reg_write(COMMAND, 32'h00000005);
+    reg_write(COMMAND, 32'h00000007);
     // Poll Done Signal
     reg_read(COMMAND, reg_status);
     while (reg_status[0]==1'b0) // check LSB status

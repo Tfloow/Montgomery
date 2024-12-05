@@ -111,12 +111,12 @@ plt.savefig("montgomery_report_perf.pdf")
 
 ### RSA ###
 # REDO IMPLEMENTATION TO FIND THE RIGHT DATA
-ite = [1,2,3]
-Cycle_montgomery = [3097, 3097, 3097]
-Cycle = [106469, 106469, 107106] # for 16 bit exponents
-WNS = [-.333,.118,.211]
-LUTS = [13886, 13886, 13877]
-REG = [13865, 13865, 13891]
+ite = [1,2,3,4]
+Cycle_montgomery = [3097, 3097, 3097,3097]
+Cycle = [106469, 106469, 107106, 56754] # for 16 bit exponents
+WNS = [-.333,.118,.211,.102]
+LUTS = [13886, 13886, 13877,20481]
+REG = [13865, 13865, 13891,21123]
 
 fig, axs = plt.subplots(1,2,figsize=(10, 4))
 
