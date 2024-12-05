@@ -112,11 +112,11 @@ plt.savefig("montgomery_report_perf.pdf")
 ### RSA ###
 # REDO IMPLEMENTATION TO FIND THE RIGHT DATA
 ite = [1,2,3,4]
-Cycle_montgomery = [3097, 3097, 3097,3097]
-Cycle = [106469, 106469, 107106, 107106] # for 16 bit exponents
-WNS = [-.333,.118,.211,.049]
-LUTS = [13886, 13886, 13877,12086]
-REG = [13865, 13865, 13891,13891]
+Cycle_montgomery = [3097, 3097,3097,3097]
+Cycle = [106469, 107106, 107106,56754] # for 16 bit exponents
+WNS = [-.333,.211,.049,0.102]
+LUTS = [13886, 13877,12086, 20481]
+REG = [13865, 13891,13891,21123]
 
 fig, axs = plt.subplots(1,2,figsize=(10, 4))
 
@@ -143,7 +143,7 @@ ax1.grid()
 ax2.set_title("Utilization of the Montgomery Multiplier")
 ax2.plot(ite, LUTS, "-^", label="# of Sliced LUTS", color=color2, alpha=0.7)
 ax2.plot(ite, REG,  "-s", label="# of Sliced Registers", color=color2, alpha=0.7)
-ax2.set_ylim(0,20000)
+ax2.set_ylim(0,25000)
 
 ax2.set_xlabel("Iteration of the Design")
 ax2.set_ylabel("Amount")

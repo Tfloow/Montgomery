@@ -85,7 +85,25 @@ void encode_message(uint32_t* m, char* message_to_send, uint32_t size, uint32_t 
   write_to_buffer(m, sanitize_input);
 }
 
+void print_encoded_message(uint32_t* m){
+  /*
+  m               : the 128 bytes aligned buffer after using encode_message
+  */
+  int i;
+  for (i=32-1; i>=0; i--){
+	for(int j = 3; j >=0; j--){
+		if((char)(m[i] >> j*8) == 00){
+			printf("\n");
+			return;
+		}
+		printf("%c",(char) (m[i] >> j*8));
+	}
+  }
+  printf("\n");
+}
+
 void encrypt(volatile uint32_t* HWreg, uint32_t* A, uint32_t* X_tilde, uint32_t* M, uint32_t* R_N, uint32_t* e, uint32_t e_len ){
+
   // HERE IS THE START OF THE ALGORITHM
   // Running the montgomery Exponentiation
   HWreg[RXADDR]  = (uint32_t) M;
@@ -181,6 +199,7 @@ int main() {
   // Proposed CSR for command : use 8 bits : 0bxxxx x used xxx used for number fed
   uint32_t* adress_list[3] = {N,e,R2_N};
   for(int i = 1; i <= 3; i+=2){ // skipping the R_N write cause no more need !!!!
+
     HWreg[RXADDR] = (uint32_t) adress_list[i-1]; // store address idata in reg1
     HWreg[LOADING] = (uint32_t) 8 + i; // 0b1000 + i indicating the state and which datas are being loaded.
     // wait for the FPGA to be done
@@ -205,26 +224,29 @@ int main() {
 
   if(SEND_MY_MESSAGE){
     printf("TO BE CREATED\n");
-    char* my_message = "Hello world ! This is a message that is longer than 128 characters. So we can also check if this handles longer string of character (hopefully). Can you decrypt it ?";
+    char* my_message = "Hello world ! This is a message that is longer than 128 characters. So we can also check if this handles longer string of character (hopefully). Can you decrypt it ?\n To avoid the program to go crazy we can for now send maximum a 1000 characters at a time because my strlen isn't really secure. Sorry COSIC.";
     alignas(128) uint32_t message_buffer[32] = {0};
     uint32_t size = my_strlen(my_message);
     uint32_t amount_of_frame = (uint32_t)  ((size-1)/128 + 1);
+    //uint32_t message_decrypted[size+1] = {0};
 
     alignas(128) uint32_t X_tilde[32] = {0};
     alignas(128) uint32_t A[32] = {0};
 
     for(uint32_t blocks = 0; blocks < amount_of_frame; blocks++){
       encode_message(message_buffer, my_message,size,blocks);
-      printf("Message to send\n");
-      print_array_contents(message_buffer);
+      printf("Message to send : \n");
+      print_encoded_message(message_buffer);
       printf("____\n");
 
       encrypt(HWreg, A, X_tilde, message_buffer, R_N, e, e_len );
-      print_array_contents(A); // This should hold the encrypted message
+      printf("Message encrypted : \n");
+      print_encoded_message(A); // This should hold the encrypted message
       printf("____\n");
 
       encrypt(HWreg, A, X_tilde, A, R_N, d, d_len );
-      print_array_contents(A); // This should hold the decrypted message
+      printf("Message decrypted : \n");
+      print_encoded_message(A); // This should hold the decrypted message
 
       compare_array_contents(A,message_buffer);
       printf("___________\n");
@@ -239,7 +261,7 @@ int main() {
     }
     // HERE IS THE START OF THE ALGORITHM
     START_TIMING
-	  encrypt(HWreg, A, X_tilde, M, R_N, e, e_len );
+	encrypt(HWreg, A, X_tilde, M, R_N, e, e_len );
 
     STOP_TIMING
     // END OF THE ALGORITHM
@@ -260,7 +282,7 @@ int main() {
 
     // Decrypt
     START_TIMING
-	  encrypt(HWreg, A, X_tilde, A, R_N, d, d_len );
+	encrypt(HWreg, A, X_tilde, A, R_N, d, d_len );
     STOP_TIMING
     // END OF THE ALGORITHM
     printf("STATUS 0 %08X | Done %d | Idle %d | Error %d \r\n", (unsigned int)HWreg[STATUS], ISFLAGSET(HWreg[STATUS],0), ISFLAGSET(HWreg[STATUS],1), ISFLAGSET(HWreg[STATUS],2));
