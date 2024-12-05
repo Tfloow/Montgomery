@@ -111,12 +111,12 @@ plt.savefig("montgomery_report_perf.pdf")
 
 ### RSA ###
 # REDO IMPLEMENTATION TO FIND THE RIGHT DATA
-ite = [1,2,3]
-Cycle_montgomery = [3097, 3097, 3097]
-Cycle = [106469, 106469, 107106] # for 16 bit exponents
-WNS = [-.333,.118,.211]
-LUTS = [13886, 13886, 13877]
-REG = [13865, 13865, 13891]
+ite = [1,2,3,4]
+Cycle_montgomery = [3097, 3097, 3097,3097]
+Cycle = [106469, 106469, 107106, 107106] # for 16 bit exponents
+WNS = [-.333,.118,.211,.049]
+LUTS = [13886, 13886, 13877,12086]
+REG = [13865, 13865, 13891,13891]
 
 fig, axs = plt.subplots(1,2,figsize=(10, 4))
 
@@ -200,9 +200,8 @@ plt.savefig("encryption_decryption_perf.pdf")
 
 # Loading and Sending
 
-loading = [734,818,724,824,735,731,738,736,734,824,837,925,737,818,817,815,816,804,816,804,810,935,816,804,921,804,816,920,810,804,813,801,734,728,814,710,813,830,810,818,813,935,810,798,921,804,816,914,810,798,907,804]
-sending = []
-
+loading = [469 ,565 ,778 ,567 ,561 ,553 ,553 ,547 ,547 ,556 ,556 ,553 ,553 ,556 ,556 ,553 ,553 ,556 ,556 ,553 ,553 ,556 ,556 ,553 ,547 ,547 ,547 ,556 ,556 ,553 ,547 ,547 ,547 ,556 ,556 ,553 ,547 ,547 ,547 ,556]
+sending = [166,157,172,172,157,157,163,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,19 ,142]
 
 
 # Set the Seaborn style
@@ -215,27 +214,24 @@ data = pd.DataFrame({
     "Operation": ["Loading DMA"] * len(loading) + ["Sending DMA"] * len(sending)
 })
 
+print(data[data["Operation"] == "Sending DMA"].describe())
+print(data[data["Operation"] == "Loading DMA"].describe())
 
-fig, axs = plt.subplots(1, 2, figsize=(10, 4))
+fig, axs = plt.subplots(figsize=(6, 4))
 
 # Plot the histograms
-axs[0].set_xlim(0,1000)
-sns.histplot(data[data["Operation"] == "Loading DMA"], x="Cycles", ax=axs[0], kde=False, color=color1, label="# CPU Cycles")
-sns.histplot(data[data["Operation"] == "Sending DMA"], x="Cycles", ax=axs[1], kde=False, color=color2, label="# CPU Cycles")
+axs.set_xlim(0,1000)
+sns.histplot(data[data["Operation"] == "Loading DMA"], x="Cycles", kde=False, color=color1, label="From Software to Hardware", binwidth=50, stat="percent")
+sns.histplot(data[data["Operation"] == "Sending DMA"], x="Cycles", kde=False, color=color2, label="From Hardware to Software", binwidth=50, stat="percent")
 
 # Set titles, labels, and legends
-axs[0].set_title("Speed for sending 1024 bits & Instruction signal")
-axs[1].set_title("Speed for receiving 1024 bits")
+axs.set_title("Speed for Transmiting 1024 bits through DMA")
 
-axs[0].set_xlabel("Amount of cycles")
+axs.set_xlabel("Amount of CPU Clock Cycles")
 
-axs[1].set_xlabel("Amount of cycles")
+axs.set_ylabel("Percentage [%]")
 
-axs[0].set_ylabel("Occurrences")
-axs[1].set_ylabel("Occurrences")
-
-axs[0].legend()
-axs[1].legend()
+axs.legend(loc="upper left")
 
 # Adjust layout and save the figure
 #plt.tight_layout()

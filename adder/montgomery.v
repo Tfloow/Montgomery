@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "adder.v" // OLD ADDER
+// OLD ADDER
 
 module seven_multiplexer(
     input           clk,
@@ -107,7 +107,7 @@ module shift_register(
     // The brain of the shift register
     always @ (posedge clk) begin
     // Reset
-
+        
         // writing to memory
         if(enable) begin
             current_number <= in_number;
@@ -135,7 +135,7 @@ module montgomery(
     input  [1023:0] in_a,
     input  [1023:0] in_b,
     input  [1023:0] in_m,
-    output [1024:0] result,
+    output [1023:0] result,
     output   wire       done
         );
 

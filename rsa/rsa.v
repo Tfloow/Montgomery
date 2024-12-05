@@ -169,7 +169,7 @@ module rsa (
     assign rout4 = result[31:0];  // not used
     assign rout5 = A_Q[31:0];  // not used
     assign rout6 = X_tilde_Q[31:0];  // not used
-    assign rout7 = dma_rx_data[31:0];  // not used
+    assign rout7 = state;  // not used
 
     
   always@(*) begin
