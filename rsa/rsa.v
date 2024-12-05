@@ -96,7 +96,14 @@ module rsa (
     wire [1023:0] in_m;
     wire [1023:0] result;
     wire done_montgomery;
-    montgomery mont(clk, resetn, start_montgomery, in_a, in_b, in_m, result, done_montgomery);
+    montgomery mont_A(clk, resetn, start_montgomery, in_a, in_b, in_m, result, done_montgomery);
+
+    wire [1023:0] in_a_X_tilde;
+    wire [1023:0] in_b_X_tilde;
+    wire [1023:0] in_m_X_tilde;
+    wire [1023:0] result_X_tilde;
+    wire done_montgomery_X_tilde;
+    montgomery mont_X_Tilde(clk, resetn, start_montgomery, in_a_X_tilde, in_b_X_tilde, in_m_X_tilde, result_X_tilde, done_montgomery_X_tilde);
 
     // X_tilde
     wire X_tilde_en;
@@ -119,44 +126,43 @@ module rsa (
     /*
       CHANGE TO THE API
       COMMAND :
-        0b0001 : 0x01 : MontMul(DMA, X_tilde, N)
-        0b0011 : 0x03 : MontMul(DMA, DMA, N)
-        0b0101 : 0x05 : MontMul(DMA, 1, N)
-        Write to registers commands
-        0b1001 : 0x09 : MontMul(DMA, R2N, N)
-        0b1011 : 0x0B : MontMul(X_tilde, X_tilde, N)
-        0b1101 : 0x0D : MontMUl(DMA, X_tilde, N)
+        0b0001 : 0x01 : A: NOT VALID              X_tilde: MontMul(A      , R2N, N) using A register as the X
+        0b0011 : 0x03 : A: MontMul(A,X_tilde,N)   X_tilde: MontMul(X_tilde, X_tilde, N)
+        0b0101 : 0x05 : A: MontMul(A,A,N, DBG)    X_tilde: MontMul(A      , X_tilde,N, DBG)
+        0b0111 : 0x07 : A: MontMul(A,1,N, DBG)    X_tilde: NOT VALID
      */
     // In this example we have only one computation command.
     // montMul wire
     // No writing to X_tilde
-    wire isXtildeMM = (command == 32'h1);
-    wire isDMAMM = (command == 32'h3);
-    wire isOne = (command == 32'h5);
-    // Writing to X_tilde
-    wire isR_2NMM_SAVE = (command == 32'h9);
-    wire isX_TildeMM_SAVE = (command == 32'hB);
-    wire isDMA_SAVE = (command == 32'hD);
-    
-    wire isCmdComp = isXtildeMM || isDMAMM || isOne || isR_2NMM_SAVE || isX_TildeMM_SAVE || isDMA_SAVE;
+    wire isFirst_X_tilde = (command == 32'h1);
+    wire isFirst_condition = (command == 32'h3);
+    wire isSecond_condition = (command == 32'h5);
+    wire isLast_A = (command == 32'h7);
+
+    wire isCmdComp = isFirst_X_tilde || isFirst_condition || isSecond_condition || isLast_A;
     wire isCmdIdle = ~isCmdComp;
-    wire saveXTilde = isR_2NMM_SAVE || isX_TildeMM_SAVE || isDMA_SAVE;
-    wire saveA = isXtildeMM || isDMAMM || isOne;
+
+    reg montgomery_1_done;
+    reg montgomery_done;
     
     // When we need to update the X_tilde
-    assign X_tilde_en = saveXTilde & dma_done;    
-    assign X_tilde_D  = (state != STATE_TX_WAIT && state != STATE_TX && state != STATE_DONE) ? dma_rx_data : result;
+    assign X_tilde_en = done_montgomery_X_tilde && ~isLast_A; // Last part isn't important just to avoid useless power usage
+    assign X_tilde_D  = result_X_tilde;
     
-    assign A_en = saveA & dma_done;
-    assign A_D  = (state != STATE_TX_WAIT && state != STATE_TX && state != STATE_DONE) ? dma_rx_data : result;
+    assign A_en = dma_done && (state != STATE_TX || state != STATE_TX_WAIT);
+    assign A_D  = dma_rx_data;
 
     reg sent_signal;
     assign start_montgomery = ~sent_signal && state == STATE_COMPUTE;
 
-    assign in_a = (isX_TildeMM_SAVE || isR_2NMM_SAVE) ? X_tilde_Q : A_Q;
-    assign in_b = isDMAMM ? in_a : (isOne ? 1024'h1 : (isR_2NMM_SAVE ? R2_N_Q : X_tilde_Q)); 
+    assign in_a = A_Q;
+    assign in_b = isFirst_condition ? X_tilde_Q : (isSecond_condition ? A_Q : 1024'h1); 
     assign in_m = N_Q;
     assign dma_tx_data = result; // to avoid over writing
+
+    assign in_a_X_tilde = isFirst_condition ? X_tilde_Q : A_Q;
+    assign in_b_X_tilde = isFirst_X_tilde ? R2_N_Q : X_tilde_Q; 
+    assign in_m_X_tilde = N_Q;
     // I MAY USE TOOOOOO MANY LUTS LOL
   
   // command to check if receiving save data
@@ -202,7 +208,7 @@ module rsa (
       // A state for dummy computation for this example. Because this
       // computation takes only single cycle, go to TX state immediately
       STATE_COMPUTE : begin
-        next_state <= (done_montgomery) ? STATE_TX : STATE_COMPUTE; // won't stop until montgomery is good
+        next_state <= (montgomery_done) ? STATE_TX : STATE_COMPUTE; // won't stop until montgomery is good
       end
 
       // Wait, if dma is not idle. Otherwise, start dma operation and go to
@@ -234,10 +240,32 @@ module rsa (
     dma_rx_start <= 1'b0;
     dma_tx_start <= 1'b0;
     sent_signal <= sent_signal;
+    montgomery_1_done <= 1'b0;
+    montgomery_done   <= 1'b0;
     case (state)
       STATE_IDLE: sent_signal <= 1'b0;
       STATE_RX: dma_rx_start <= 1'b1;
-      STATE_COMPUTE : sent_signal <= 1'b1;
+      STATE_COMPUTE : begin
+        sent_signal <= 1'b1;
+        // PIECE OF CODE MAY BE BUGGY IDK
+        if(done_montgomery && done_montgomery_X_tilde) begin
+            montgomery_1_done <= 1'b1;
+            montgomery_done   <= 1'b1;
+        end else begin
+            if((done_montgomery || done_montgomery_X_tilde) && ~montgomery_1_done) begin
+                montgomery_1_done <= 1'b1;
+                montgomery_done   <= 1'b0;
+            end else begin 
+                if((done_montgomery || done_montgomery_X_tilde) && montgomery_1_done) begin
+                  montgomery_1_done <= 1'b1;
+                  montgomery_done   <= 1'b1;
+                end else begin
+                    montgomery_1_done <= montgomery_1_done ;
+                    montgomery_done   <= montgomery_done;
+                end
+            end
+        end
+      end
       STATE_TX: dma_tx_start <= 1'b1;
     endcase
   end

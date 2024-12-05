@@ -86,13 +86,12 @@ void encode_message(uint32_t* m, char* message_to_send, uint32_t size, uint32_t 
 }
 
 void encrypt(volatile uint32_t* HWreg, uint32_t* A, uint32_t* X_tilde, uint32_t* M, uint32_t* R_N, uint32_t* e, uint32_t e_len ){
-
   // HERE IS THE START OF THE ALGORITHM
   // Running the montgomery Exponentiation
   HWreg[RXADDR]  = (uint32_t) M;
   HWreg[TXADDR]  = (uint32_t) X_tilde;
   // Launch Montgomery Multiplication
-  HWreg[COMMAND] = 0x09;
+  HWreg[COMMAND] = 0x01;
   while((HWreg[STATUS] & 0x01) == 0);
   HWreg[COMMAND] = 0x00;
 
@@ -107,32 +106,15 @@ void encrypt(volatile uint32_t* HWreg, uint32_t* A, uint32_t* X_tilde, uint32_t*
       // Launch Montgomery Multiplication
       HWreg[RXADDR]  = (uint32_t) A;
       HWreg[TXADDR]  = (uint32_t) A;
-      HWreg[COMMAND] = 0x01;
-      while((HWreg[STATUS] & 0x01) == 0);
-      HWreg[COMMAND] = 0x00;
-
-      HWreg[RXADDR]  = (uint32_t) X_tilde;
-      HWreg[TXADDR]  = (uint32_t) X_tilde;
-      // do for X_tilde
-      // Launch Montgomery Multiplication
-      HWreg[COMMAND] = 0x0B;
+      HWreg[COMMAND] = 0x03;
       while((HWreg[STATUS] & 0x01) == 0);
       HWreg[COMMAND] = 0x00;
     }else{
       // do for X_tilde
       // Launch Montgomery Multiplication
-      HWreg[RXADDR]  = (uint32_t) X_tilde;
-      HWreg[TXADDR]  = (uint32_t) X_tilde;
-      HWreg[COMMAND] = 0x0D;
-      while((HWreg[STATUS] & 0x01) == 0);
-      HWreg[COMMAND] = 0x00;
-
-
       HWreg[RXADDR]  = (uint32_t) A;
       HWreg[TXADDR]  = (uint32_t) A;
-      // do for R_N
-      // Launch Montgomery Multiplication
-      HWreg[COMMAND] = 0x03;
+      HWreg[COMMAND] = 0x05;
       while((HWreg[STATUS] & 0x01) == 0);
       HWreg[COMMAND] = 0x00;
     }
@@ -143,7 +125,7 @@ void encrypt(volatile uint32_t* HWreg, uint32_t* A, uint32_t* X_tilde, uint32_t*
   HWreg[RXADDR]  = (uint32_t) A;
   HWreg[TXADDR]  = (uint32_t) A;
 
-  HWreg[COMMAND] = 0x05;
+  HWreg[COMMAND] = 0x07;
   while((HWreg[STATUS] & 0x01) == 0);
   HWreg[COMMAND] = 0x00;
 }
@@ -199,10 +181,10 @@ int main() {
   // Proposed CSR for command : use 8 bits : 0bxxxx x used xxx used for number fed
   uint32_t* adress_list[3] = {N,e,R2_N};
   for(int i = 1; i <= 3; i+=2){ // skipping the R_N write cause no more need !!!!
-	START_TIMING
     HWreg[RXADDR] = (uint32_t) adress_list[i-1]; // store address idata in reg1
     HWreg[LOADING] = (uint32_t) 8 + i; // 0b1000 + i indicating the state and which datas are being loaded.
     // wait for the FPGA to be done
+    START_TIMING
     while((HWreg[STATUS] & 0x01) == 0);
     STOP_TIMING
     HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
@@ -257,7 +239,7 @@ int main() {
     }
     // HERE IS THE START OF THE ALGORITHM
     START_TIMING
-	encrypt(HWreg, A, X_tilde, M, R_N, e, e_len );
+	  encrypt(HWreg, A, X_tilde, M, R_N, e, e_len );
 
     STOP_TIMING
     // END OF THE ALGORITHM
@@ -278,7 +260,7 @@ int main() {
 
     // Decrypt
     START_TIMING
-	encrypt(HWreg, A, X_tilde, A, R_N, d, d_len );
+	  encrypt(HWreg, A, X_tilde, A, R_N, d, d_len );
     STOP_TIMING
     // END OF THE ALGORITHM
     printf("STATUS 0 %08X | Done %d | Idle %d | Error %d \r\n", (unsigned int)HWreg[STATUS], ISFLAGSET(HWreg[STATUS],0), ISFLAGSET(HWreg[STATUS],1), ISFLAGSET(HWreg[STATUS],2));

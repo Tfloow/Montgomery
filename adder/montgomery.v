@@ -1,5 +1,4 @@
 `timescale 1ns / 1ps
-// OLD ADDER
 
 module seven_multiplexer(
     input           clk,
