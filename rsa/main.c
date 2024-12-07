@@ -15,7 +15,7 @@ extern uint32_t N[32],    // modulus
                 R2_N[32];// (2^1024)^2 mod N
 
 #define ISFLAGSET(REG,BIT) ( (REG & (1<<BIT)) ? 1 : 0 )
-#define SEND_MY_MESSAGE 1
+#define SEND_MY_MESSAGE 0
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
 #define COMMAND 0
@@ -148,6 +148,18 @@ void encrypt(volatile uint32_t* HWreg, uint32_t* A, uint32_t* X_tilde, uint32_t*
   HWreg[COMMAND] = 0x00;
 }
 
+void load_data(volatile uint32_t* HWreg, uint32_t* N, uint32_t* R2_N ){
+  HWreg[RXADDR] = (uint32_t) N;
+  HWreg[LOADING] = (uint32_t) 8 + 1; // 0b1000 + i indicating the state and which datas are being loaded.
+  while((HWreg[STATUS] & 0x01) == 0);   // wait for the FPGA to be done
+  HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
+
+  HWreg[RXADDR] = (uint32_t) R2_N;
+  HWreg[LOADING] = (uint32_t) 8 + 3; // 0b1000 + i indicating the state and which datas are being loaded.
+  while((HWreg[STATUS] & 0x01) == 0);   // wait for the FPGA to be done
+  HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
+}
+
 uint32_t my_strlen(char* string){
   // I know this is the dumbest idea to do a custom strlen but IDK if we have string.h library
   // Please COSIC be nice and don't do buffer overflow pleaseeeeee
@@ -197,29 +209,15 @@ int main() {
   uint32_t* res = (d_len == 1022) ? res1 : ((d_len == 1018) ? res4 : ((d_len == 1023) ? res5 : (e[0] == 0x0000a295) ? res3 : res2));
 
   // Proposed CSR for command : use 8 bits : 0bxxxx x used xxx used for number fed
-  uint32_t* adress_list[3] = {N,e,R2_N};
-  for(int i = 1; i <= 3; i+=2){ // skipping the R_N write cause no more need !!!!
-
-    HWreg[RXADDR] = (uint32_t) adress_list[i-1]; // store address idata in reg1
-    HWreg[LOADING] = (uint32_t) 8 + i; // 0b1000 + i indicating the state and which datas are being loaded.
-    // wait for the FPGA to be done
-    START_TIMING
-    while((HWreg[STATUS] & 0x01) == 0);
-    STOP_TIMING
-    HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
-  }
+  load_data(HWreg, N, R2_N);
   // the message stays inside the DMA
-  // THIS VERSION WILL JUST RUN THE MONTGOMERY MULTIPLICATION IN HARDWARE AND THE REST IN SOFTWARE
   /*
   CHANGE TO THE API
   COMMAND :
-    0b0001 : 0x01 : MontMul(DMA, X_tilde, N)
-    0b0011 : 0x03 : MontMul(DMA, DMA, N)
-    0b0101 : 0x05 : MontMul(DMA, 1, N)
-    Write to registers commands
-    0b1001 : 0x09 : MontMul(DMA, R2N, N)
-    0b1011 : 0x0B : MontMul(X_tilde, X_tilde, N)
-    0b1101 : 0x0D : MontMUl(DMA, X_tilde, N)
+    0b0001 : 0x01 : A: NOT VALID              X_tilde: MontMul(A      , R2N, N) using A register as the X
+    0b0011 : 0x03 : A: MontMul(A,X_tilde,N)   X_tilde: MontMul(X_tilde, X_tilde, N)
+    0b0101 : 0x05 : A: MontMul(A,A,N, DBG)    X_tilde: MontMul(A      , X_tilde,N, DBG)
+    0b0111 : 0x07 : A: MontMul(A,1,N, DBG)    X_tilde: NOT VALID
   */
 
   if(SEND_MY_MESSAGE){

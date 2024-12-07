@@ -220,7 +220,7 @@ print(data[data["Operation"] == "Loading DMA"].describe())
 fig, axs = plt.subplots(figsize=(6, 4))
 
 # Plot the histograms
-axs.set_xlim(0,1000)
+axs.set_xlim(0,800)
 sns.histplot(data[data["Operation"] == "Loading DMA"], x="Cycles", kde=False, color=color1, label="From Software to Hardware", binwidth=50, stat="percent")
 sns.histplot(data[data["Operation"] == "Sending DMA"], x="Cycles", kde=False, color=color2, label="From Hardware to Software", binwidth=50, stat="percent")
 

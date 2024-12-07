@@ -161,7 +161,7 @@ module rsa (
     assign dma_tx_data = result; // to avoid over writing
 
     assign in_a_X_tilde = isFirst_condition ? X_tilde_Q : A_Q;
-    assign in_b_X_tilde = isFirst_X_tilde ? R2_N_Q : X_tilde_Q; 
+    assign in_b_X_tilde = ~isFirst_X_tilde ? R2_N_Q : X_tilde_Q; // Yes I literally do an inverse so the drawing of the Hardware is prettier 
     assign in_m_X_tilde = N_Q;
     // I MAY USE TOOOOOO MANY LUTS LOL
   
