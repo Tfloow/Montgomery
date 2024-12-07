@@ -102,12 +102,12 @@ void print_encoded_message(uint32_t* m){
   printf("\n");
 }
 
-void encrypt(volatile uint32_t* HWreg, uint32_t* A, uint32_t* X_tilde, uint32_t* M, uint32_t* R_N, uint32_t* e, uint32_t e_len ){
+void encrypt(volatile uint32_t* HWreg, uint32_t* A, uint32_t* M, uint32_t* R_N, uint32_t* e, uint32_t e_len ){
 
   // HERE IS THE START OF THE ALGORITHM
   // Running the montgomery Exponentiation
   HWreg[RXADDR]  = (uint32_t) M;
-  HWreg[TXADDR]  = (uint32_t) X_tilde;
+  //HWreg[TXADDR]  = (uint32_t) X_tilde;
   // Launch Montgomery Multiplication
   HWreg[COMMAND] = 0x01;
   while((HWreg[STATUS] & 0x01) == 0);
@@ -159,6 +159,58 @@ void load_data(volatile uint32_t* HWreg, uint32_t* N, uint32_t* R2_N ){
   while((HWreg[STATUS] & 0x01) == 0);   // wait for the FPGA to be done
   HWreg[LOADING] = (uint32_t) 0; // to reset for the next state
 }
+
+void rsa_encryption(volatile uint32_t* HWreg, uint32_t* M, uint32_t* N, uint32_t* R_N, uint32_t* R2_N, uint32_t* e, uint32_t e_len){
+  // M is the message and will hold the encrypted message
+  load_data(HWreg, N, R2_N);
+  encrypt(HWreg, RES, M, R_N,e,e_len);
+}
+
+void rsa_decryption(volatile uint32_t* HWreg, uint32_t* A, uint32_t* N, uint32_t* R_N, uint32_t* R2_N, uint32_t* d, uint32_t d_len){
+  // A is the Ct and will hold the message after decryption
+  load_data(HWreg, N, R2_N);
+  encrypt(HWreg, A, A, R_N,d,d_len);
+}
+
+void mp_sub(uint32_t *a, uint32_t *b, uint32_t *res, uint32_t size)
+{
+    uint32_t c = 0;
+    uint32_t i = 0;
+
+    uint32_t tmp = 0;
+
+    for(; i < size; i++){
+        tmp = (a[i] - c);
+        res[i] = tmp - b[i];
+        if (tmp >= b[i]){
+            c = 0;
+        }else{
+            c = 1;
+        }
+    }
+}
+
+void rsa_decryption_CRT(volatile uint32_t* HWreg, uint32_t* A, uint32_t* N, uint32_t* R_N, uint32_t* R2_N, uint32_t* d, uint32_t d_len, uint32_t* RES, 
+                        uint32_t* dP, uint32_t dP_len,  uint32_t* dQ, uint32_t dQ_len, uint32_t* qinv, uint32_t qinv_len){
+  // R = 2^1024 so R_N and R2_N is the same
+  // A holds the encrypted message
+  load_data(HWreg, N, R2_N);
+  alignas(128) uint32_t M1[32] = {0};
+  alignas(128) uint32_t M2[32] = {0};
+  // Copy the encrypted message in both
+  for(int i = 0; i < 32; i++){
+    M1[i] = A[i];
+    M2[i] = A[i];
+  }
+  // Do the M1
+  encrypt(HWreg, M1, M1, R_N,dP,dP_len);
+  // Do the M2
+  encrypt(HWreg, M2, M2, R_N,dQ,dQ_len);
+  // Subtraction
+  mp_sub(M1,M2,M1,32);
+  // Need to do the multiplication and sum mult later
+}
+
 
 uint32_t my_strlen(char* string){
   // I know this is the dumbest idea to do a custom strlen but IDK if we have string.h library
@@ -254,12 +306,9 @@ int main() {
     alignas(128) uint32_t X_tilde[32] = {0};
     alignas(128) uint32_t A[32] = {0};
     // Won't use memcpy just to avoid library dependencies
-    for(int count = 0; count < 32; count++){
-      A[count] = R_N[count];
-    }
     // HERE IS THE START OF THE ALGORITHM
     START_TIMING
-	encrypt(HWreg, A, X_tilde, M, R_N, e, e_len );
+	  encrypt(HWreg, A, X_tilde, M, R_N, e, e_len );
 
     STOP_TIMING
     // END OF THE ALGORITHM

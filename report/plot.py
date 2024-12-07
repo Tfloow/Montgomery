@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
+
+color1 = "teal"
+color2 = "brown"
+
 ### ADDER PLOT ###
 size = [514,343,257,64]
 Cycles = [3,4,5,18]
@@ -10,8 +14,6 @@ WNS = [0.376, 0.784, 0.358, 1.937]
 LUTS = [2718, 2470, 2269, 2066]
 REG = [3106, 3112, 3113, 3168]
 
-color1 = "teal"
-color2 = "brown"
 
 fig, axs = plt.subplots(1,2,figsize=(10, 4))
 
@@ -117,6 +119,10 @@ Cycle = [106469, 107106, 107106,56754] # for 16 bit exponents
 WNS = [-.333,.211,.049,0.102]
 LUTS = [13886, 13877,12086, 20481]
 REG = [13865, 13891,13891,21123]
+
+print(f"Speed Improvements : {Cycle[-2]/Cycle[-1]}")
+print(f"LUTS Improvements : {LUTS[-1]/LUTS[-2]}")
+print(f"REG Improvements : {REG[-1]/REG[-2]}")
 
 fig, axs = plt.subplots(1,2,figsize=(10, 4))
 
@@ -236,3 +242,30 @@ axs.legend(loc="upper left")
 # Adjust layout and save the figure
 #plt.tight_layout()
 plt.savefig("loading_sending_perf.pdf")
+
+sns.set_style(style="whitegrid")
+
+# Create subplots
+data = pd.read_csv("RSA-CRT.csv")
+
+print(data)
+
+fig, axs = plt.subplots(figsize=(6, 4))
+
+# Plot the histograms
+axs.set_xlim(4,6)
+sns.histplot(data["RSA"], kde=False, color=color1, label="RSA",bins=5, stat="percent")
+sns.histplot(data["RSA-CRT"], kde=False, color=color2, label="RSA-CRT",bins=5, stat="percent")
+
+# Set titles, labels, and legends
+axs.set_title("Comparison of Python implementation of RSA \nfor a 1022 bits decryption key")
+
+axs.set_xlabel("Time [s]")
+
+axs.set_ylabel("Percentage [%]")
+
+axs.legend(loc="upper left")
+
+# Adjust layout and save the figure
+#plt.tight_layout()
+plt.savefig("RSA_CRT_Python_perf.pdf")
