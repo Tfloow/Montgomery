@@ -165,6 +165,32 @@ fig.tight_layout()
 
 plt.savefig("rsa_report_perf.pdf")
 
+### C,ARM,co-design
+Montgomery_CPU_Cycle = [258559, 45607, 3097*6.5]
+RSA_CPU_cycle = [258559*34,45607*34,381100] # simulation for 16 bits exponents
+tag = ["C code", "ARM Assembly", "Co-Design"]
+x = [i for i in range(0,258559,100)]
+y = [i*34 for i in x]
+
+fig, ax = plt.subplots(figsize=(8, 5))
+
+ax.set_title("C vs ARM vs Co-Design Speed comparison\nfor encrypting a message with a 16 bits exponent")
+ax.plot(x,y,"--", alpha=0.4,color="grey")
+ax.scatter(Montgomery_CPU_Cycle,RSA_CPU_cycle, color=color1)
+ax.set_xlabel("Amount of CPU cycles for one Montgomery Multiplication")
+ax.set_ylabel("Amount of CPU cycles for encrypting using RSA")
+
+for i, txt in enumerate(tag):
+    ax.annotate(txt, (Montgomery_CPU_Cycle[i]-10000, RSA_CPU_cycle[i]+140000))
+
+ax.grid()
+
+ax.set_xlim(0)
+fig.tight_layout()
+
+
+plt.savefig("C_ARM_CO_comparison.pdf")
+
 # speed with test vectors
 
 seed = [5,4,3,2,1]
@@ -243,12 +269,9 @@ axs.legend(loc="upper left")
 #plt.tight_layout()
 plt.savefig("loading_sending_perf.pdf")
 
-sns.set_style(style="whitegrid")
 
 # Create subplots
 data = pd.read_csv("RSA-CRT.csv")
-
-print(data)
 
 fig, axs = plt.subplots(figsize=(6, 4))
 
