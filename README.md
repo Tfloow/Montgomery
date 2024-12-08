@@ -1,5 +1,9 @@
 # Montgomery Multiplication
 
+This work is protected under [**CC BY-NC-ND 4.0**](LICENSE) license. No derivative is permitted unless you have received the written permission by the two authors of this work and all involved party of this project.
+
+____
+
 Go to the [adder](/adder) folder
 
 I think the state 7 is not quite ready yet 
@@ -13,8 +17,8 @@ I think the state 7 is not quite ready yet
 |  64   |  18   | 2.302 |    2139    |      3185       |
 
 
-![montgomery](montgomery.png)
+![montgomery](report/montgomery.png)
 
-![montgomery with more details of the verilog code](montgomery_details.png)
+![montgomery with more details of the verilog code](report/montgomery_details.png)
 
-![FSM](fsm.png)
+![FSM](report/fsm.png)
