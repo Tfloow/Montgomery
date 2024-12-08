@@ -41,9 +41,6 @@ module rsa (
   wire [31:0] status;
   assign rout0 = status; // use rout0 as status
 
-  assign rout4 = dma_rx_address;  // not used
-  assign rout5 = loading_data;  // not used
-  assign rout7 = 32'b0;  // not used
   
     // define status
   localparam
@@ -63,7 +60,6 @@ module rsa (
   //// LOADING PART
   
     wire N_en;
-    wire R_N_en;
     wire R2_N_en;
     wire [1023:0] save_input;
   
@@ -75,57 +71,111 @@ module rsa (
             N_Q <= save_input;
     end
     
-    // R_N
-    reg [1023:0] R_N_Q;
-    always @(posedge clk) begin
-        if(R_N_en)
-            R_N_Q <= save_input;
-    end
-    
     // R2_N
     reg [1023:0] R2_N_Q;
     always @(posedge clk) begin
         if(R2_N_en)
             R2_N_Q <= save_input;
     end
-    
+
     // control the enabled pin through loading command
     assign N_en    = (loading_data[2:0] == 3'b001 && state != STATE_DONE && state != STATE_SAVE);
-    assign R_N_en  = (loading_data[2:0] == 3'b010 && state != STATE_DONE && state != STATE_SAVE);
+    //assign R_N_en  = (loading_data[2:0] == 3'b010 && state != STATE_DONE && state != STATE_SAVE);
     assign R2_N_en = (loading_data[2:0] == 3'b011 && state != STATE_DONE && state != STATE_SAVE);
     
     // connect all registers to the dma rx data
     assign save_input = dma_rx_data;
     
-    // DBG - Write the LSB to those output register
-    assign rout1 = N_Q;  
-    assign rout2 = R_N_Q; 
-    assign rout3 = R2_N_Q;  
-    assign rout6 = state;  // not used
+
 
       
   //// RSA PART
-  
-    // Here is a register for the computation. Sample the dma data input in
-  // STATE_RX_WAIT. Update the data with a dummy operation in STATE_COMP.
-  // In this example, the dummy operation sets most-significant 32-bit to zeros.
-  // Use this register also for the data output.
-  reg [1023:0] r_data = 1024'h0;
-  always@(posedge clk)
-    case (state)
-      STATE_RX_WAIT : r_data <= (dma_done) ? dma_rx_data : r_data;
-      STATE_COMPUTE : r_data <= {32'h0BADCAFE, r_data[991:0]};
-    endcase
-  assign dma_tx_data = r_data;
+    wire start_montgomery;
+    wire [1023:0] in_a;
+    wire [1023:0] in_b;
+    wire [1023:0] in_m;
+    wire [1023:0] result;
+    wire done_montgomery;
+    montgomery mont_A(clk, resetn, start_montgomery, in_a, in_b, in_m, result, done_montgomery);
 
-  
-  
-  // In this example we have only one computation command.
-  wire isCmdComp = (command == 32'd1);
-  wire isCmdIdle = (command == 32'd0);
+    wire [1023:0] in_a_X_tilde;
+    wire [1023:0] in_b_X_tilde;
+    wire [1023:0] in_m_X_tilde;
+    wire [1023:0] result_X_tilde;
+    wire done_montgomery_X_tilde;
+    montgomery mont_X_Tilde(clk, resetn, start_montgomery, in_a_X_tilde, in_b_X_tilde, in_m_X_tilde, result_X_tilde, done_montgomery_X_tilde);
+
+    // X_tilde
+    wire X_tilde_en;
+    reg [1023:0] X_tilde_Q;
+    wire [1023:0] X_tilde_D;
+    always @(posedge clk) begin
+        if(X_tilde_en)
+            X_tilde_Q <= X_tilde_D;
+    end
+    
+    // A
+    wire A_en;
+    reg [1023:0] A_Q;
+    wire [1023:0] A_D;
+    always @(posedge clk) begin
+        if(A_en)
+            A_Q <= A_D;
+    end
+      
+    /*
+      CHANGE TO THE API
+      COMMAND :
+        0b0001 : 0x01 : A: NOT VALID              X_tilde: MontMul(A      , R2N, N) using A register as the X
+        0b0011 : 0x03 : A: MontMul(A,X_tilde,N)   X_tilde: MontMul(X_tilde, X_tilde, N)
+        0b0101 : 0x05 : A: MontMul(A,A,N, DBG)    X_tilde: MontMul(A      , X_tilde,N, DBG)
+        0b0111 : 0x07 : A: MontMul(A,1,N, DBG)    X_tilde: NOT VALID
+     */
+    // In this example we have only one computation command.
+    // montMul wire
+    // No writing to X_tilde
+    wire isFirst_X_tilde = (command == 32'h1);
+    wire isFirst_condition = (command == 32'h3);
+    wire isSecond_condition = (command == 32'h5);
+    wire isLast_A = (command == 32'h7);
+
+    wire isCmdComp = isFirst_X_tilde || isFirst_condition || isSecond_condition || isLast_A;
+    wire isCmdIdle = ~isCmdComp;
+
+    reg montgomery_1_done;
+    reg montgomery_done;
+    
+    // When we need to update the X_tilde
+    assign X_tilde_en = done_montgomery_X_tilde && ~isLast_A; // Last part isn't important just to avoid useless power usage
+    assign X_tilde_D  = result_X_tilde;
+    
+    assign A_en = dma_done && (state != STATE_TX || state != STATE_TX_WAIT);
+    assign A_D  = dma_rx_data;
+
+    reg sent_signal;
+    assign start_montgomery = ~sent_signal && state == STATE_COMPUTE;
+
+    assign in_a = A_Q;
+    assign in_b = isFirst_condition ? X_tilde_Q : (isSecond_condition ? A_Q : 1024'h1); 
+    assign in_m = N_Q;
+    assign dma_tx_data = result; // to avoid over writing
+
+    assign in_a_X_tilde = isFirst_condition ? X_tilde_Q : A_Q;
+    assign in_b_X_tilde = ~isFirst_X_tilde ? R2_N_Q : X_tilde_Q; // Yes I literally do an inverse so the drawing of the Hardware is prettier 
+    assign in_m_X_tilde = N_Q;
+    // I MAY USE TOOOOOO MANY LUTS LOL
   
   // command to check if receiving save data
   wire isCmdSave = (loading_data != 32'd0);
+  
+      // DBG - Write the LSB to those output register
+    assign rout1 = in_a[31:0];  
+    assign rout2 = in_b[31:0]; 
+    assign rout3 = in_m[31:0];  
+    assign rout4 = result[31:0];  // not used
+    assign rout5 = A_Q[31:0];  // not used
+    assign rout6 = X_tilde_Q[31:0];  // not used
+    assign rout7 = state;  // not used
 
     
   always@(*) begin
@@ -158,7 +208,7 @@ module rsa (
       // A state for dummy computation for this example. Because this
       // computation takes only single cycle, go to TX state immediately
       STATE_COMPUTE : begin
-        next_state <= STATE_TX;
+        next_state <= (montgomery_done) ? STATE_TX : STATE_COMPUTE; // won't stop until montgomery is good
       end
 
       // Wait, if dma is not idle. Otherwise, start dma operation and go to
@@ -189,8 +239,33 @@ module rsa (
     counter_clk <= counter_clk + 1;
     dma_rx_start <= 1'b0;
     dma_tx_start <= 1'b0;
+    sent_signal <= sent_signal;
+    montgomery_1_done <= 1'b0;
+    montgomery_done   <= 1'b0;
     case (state)
+      STATE_IDLE: sent_signal <= 1'b0;
       STATE_RX: dma_rx_start <= 1'b1;
+      STATE_COMPUTE : begin
+        sent_signal <= 1'b1;
+        // PIECE OF CODE MAY BE BUGGY IDK
+        if(done_montgomery && done_montgomery_X_tilde) begin
+            montgomery_1_done <= 1'b1;
+            montgomery_done   <= 1'b1;
+        end else begin
+            if((done_montgomery || done_montgomery_X_tilde) && ~montgomery_1_done) begin
+                montgomery_1_done <= 1'b1;
+                montgomery_done   <= 1'b0;
+            end else begin 
+                if((done_montgomery || done_montgomery_X_tilde) && montgomery_1_done) begin
+                  montgomery_1_done <= 1'b1;
+                  montgomery_done   <= 1'b1;
+                end else begin
+                    montgomery_1_done <= montgomery_1_done ;
+                    montgomery_done   <= montgomery_done;
+                end
+            end
+        end
+      end
       STATE_TX: dma_tx_start <= 1'b1;
     endcase
   end

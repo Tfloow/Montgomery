@@ -42,6 +42,7 @@ def MontMul(A, B, M):
 
 def MontMul(A, B, M, DBG):
     # Returns (A*B*Modinv(R,M)) mod M
+
     print(f"A : {A:02X}")
     print(f"B : {B:02X}")
     print(f"M : {M:02X}")
@@ -95,45 +96,67 @@ def MontExp_MontPowerLadder(X, E, N):
 
 def MontExp_MontPowerLadder(X, E, N, DBG):
     # Returns (X^E) mod N
-    print(DBG)
     R  = 2**1024
     RN = R % N
     R2N = (R*R) % N
     A  = RN
     X_tilde = MontMul(X,R2N,N, DBG)
-    print(f"X_tilde : {X_tilde:02X}")
     t = bitlen(E)
     for i in range(0,t):
-        print(f"{'_'*20:20} {i}")
-        print(t-i-1)
         if bit(E,t-i-1) == 1:
-            print("First Condition")
-            print("CMD : 0x01")
+            #print("First Condition")
+            #print("CMD : 0x01")
             A       = MontMul(A,X_tilde,N, DBG)
-            print(f"Result : {A:02X}")
-            print(f"{'_'*20:20}")
-            print("CMD : 0x0B")
+            #print(f"Result : {A:02X}")
+            #print(f"{'_'*20:20}")
+            #print("CMD : 0x0B")
             X_tilde = MontMul(X_tilde,X_tilde,N, DBG)
-            print(f"Result : {X_tilde:02X}")
+            #print(f"Result : {X_tilde:02X}")
         else:
-            print("Second Condition")
-            print("CMD : 0x0D")
+            #print("Second Condition")
+            #print("CMD : 0x0D")
             X_tilde = MontMul(A,X_tilde,N, DBG)
-            print(f"Result : {X_tilde:02X}")
-            print(f"{'_'*20:20}")
-            print("CMD : 0x03")
+            #print(f"Result : {X_tilde:02X}")
+            #print(f"{'_'*20:20}")
+            #print("CMD : 0x03")
             A       = MontMul(A,A,N, DBG)
-            print(f"Result : {A:02X}")
+            #print(f"Result : {A:02X}")
 
         #break
-    print(f"{'_'*20:20}")
+    #print(f"{'_'*20:20}")
     A = MontMul(A,1,N, DBG)
-    print(f"Result : {A:02X}")
+    #print(f"Result : {A:02X}")
     return A
 
 if __name__ == "__main__":
+    p = 0xcecc9de0a311721fafa40bb18f72de2d350e8c7eab3fa9015f025ebff307784d9e74456705e2c6c74388f4dc221e18f34ca78383ce0bfff37bfcebdd69401df9
+    q = 0xfd91e1f8cd14e913a979933dff3501ec70ac4bd0051c3121133209f57d4d620643076a183343b5b4b47f1464fc74d894d4141ae96f7ac15ff7ad2ef78417b4c5
+    Modulus = 0xccd61077400aba4c98a62f433339650adcf9069c6bb24dd60bba4028f693324978055a3d08714b05015e270b7556d71488695fd12f8272f1d520ac979d96440401d3de7ddddab60b458971b6e683fc3c3de09b8cdef188efe99045ab59000e06e5345506bc860be0a1fd8b703b3a20de58e314bf47a5e8142d275cd928c9249d
     X = 0x8eb60bf5e833600adfdd8a07dad62ff16d598dc59c7dbc9832ece3c7b055e0b0d54dfc4fa8d0087b73b23009adb1e6f246d0fccbefb98465b8de04119df17a8179638497c4cef4e3f9c9c2efa40fef1eb20079da4deda86fcfeee16be329c697d3d7226b11a9378db6c466fd671397f0ad8a0fd6fe6a62b65d058af9433b2afe
     E = 0x00009985
     N = 0xccd61077400aba4c98a62f433339650adcf9069c6bb24dd60bba4028f693324978055a3d08714b05015e270b7556d71488695fd12f8272f1d520ac979d96440401d3de7ddddab60b458971b6e683fc3c3de09b8cdef188efe99045ab59000e06e5345506bc860be0a1fd8b703b3a20de58e314bf47a5e8142d275cd928c9249d
+    Ct = 0xFAD8C31ECFE2357DCD04CC8DEA74A05D546126AC72CAED5FB5CE372EC00E92B48BDB43BC5F83D0253724464FD95E53AD1890C273578B9010EEA2DB8687A72DBD8C572A5BAC30FC4433D6F5F336164A96E698F25E1F7C27CF78ADE714B3BC30FB4D112AB1DBE0F32B7C04B1C9DD82520509BA59E9ABF7E7918BECC550D411286 # MontExp_MontPowerLadder(X,E,N, 1)
+    D = 0x20DF3A5798F8271B948034EF1661A975A68011CED83A7AE3311D223F69D5DBBE5093578A5EFA66326E9F550CF6E633A26036CB79FD1ABEA55570BC1812142274785134908258BF27C7146FC37B277A9AB490E8AE7254281BFBC6C8AB7C4FA9C645246806C8E8F4B90D32D30625A13E1AB3847FCD2FD3B080E8CA4CB40140F46D
 
-    MontExp_MontPowerLadder(X,E,N, 1)
+    Ct = MontExp_MontPowerLadder(X,E,N, 1)
+    # Chinese remainder Theorem
+    import gmpy2
+    dp = gmpy2.invert(E, (p-1)) # 0x19a817e2931b8e746ad43a151489acdabf38860831
+    dq = gmpy2.invert(E, (q-1)) # 0x7d889c1cba4219254920691532187f5aa2b6deb05
+    qinv = gmpy2.invert(q, p) # 0xaaa636b836bd372367cdf086c55ad88cd7c61e751
+
+    from time import perf_counter
+    for _ in range(20):
+        t1_start = perf_counter()
+        m1 = MontExp_MontPowerLadder(Ct,dp,p,1)
+        m2 = MontExp_MontPowerLadder(Ct, dq,q,1)
+        h = qinv*(m1-m2) % p
+        m = m2 + h*q
+        t1_stop = perf_counter()
+        print(X==m, t1_stop-t1_start)
+    print("_____")
+    for _ in range(20):
+        t2_start = perf_counter()
+        decrypt = MontExp_MontPowerLadder(Ct,D,N, 1)
+        t2_stop = perf_counter()
+        print(X==decrypt, t2_stop-t2_start)

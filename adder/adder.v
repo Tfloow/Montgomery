@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+// OLD ADDER WITH RESET
 
 module mpadder #(parameter ADDER_SIZE = 514)(
     input  wire          clk,
@@ -22,9 +23,7 @@ module mpadder #(parameter ADDER_SIZE = 514)(
     reg  [1026:0]   regA_Q;
     reg             regA_en;
     always @(posedge clk) begin
-        if(~resetn)
-            regA_Q <= 1027'd0;
-        else if(regA_en)
+        if(regA_en)
             regA_Q <= regA_D;
     end
 
@@ -43,9 +42,7 @@ module mpadder #(parameter ADDER_SIZE = 514)(
     reg  [1026:0]   regB_Q;
     reg             regB_en;
     always @(posedge clk) begin
-        if(~resetn)
-            regB_Q <= 1027'd0;
-        else if(regB_en)
+        if(regB_en)
             regB_Q <= regB_D;
     end
 

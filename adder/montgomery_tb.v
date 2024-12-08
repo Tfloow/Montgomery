@@ -66,6 +66,7 @@ module tb_montgomery();
         #10 start = 0;  // Deassert start signal after one clock cycle
         wait(done == 1) // 1 billion time units at a 1ns timescale
         $display("Diff: %h", expected_results - result);
+        #100
         resetn = 0;
         #20 resetn = 1;  // Release reset after 10ns  // Release reset after 10ns
 
