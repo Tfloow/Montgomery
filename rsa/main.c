@@ -189,9 +189,114 @@ void mp_sub(uint32_t *a, uint32_t *b, uint32_t *res, uint32_t size)
         }
     }
 }
+void mp_add(uint32_t *a, uint32_t *b, uint32_t *res, uint32_t size)
+{
+    uint32_t c = 0;
+    uint32_t i = 0;
+
+    for(; i < size; i++){
+        res[i] = (a[i] + b[i] + c);
+        // c already take care of this possible so it is annoying
+        // i will split
+
+        c = ((((uint16_t) (a[i] >> 16)) + ((uint16_t) (b[i] >> 16))) + ((((uint16_t) a[i] + (uint16_t) b[i] + c) >> 16)>>16));
+    }
+    res[i] = c;
+}
+
+// Do A+B % N
+void mod_add(uint32_t *a, uint32_t *b, uint32_t *N, uint32_t *res, uint32_t size)
+{
+    // add like before
+    mp_add(a,b,res,size);
+
+    // to the mod we simply need to substract once easy !
+    if(res[size] >= N[size]){
+        mp_sub(res,N,res,size);
+    }
+
+    // simple clean of the size+1 32 bits part since it may contain a garbage 1
+    res[size] = 0;
+}
+
+// Those functions were assisted using AI, will need a bit more of fine tuning
+int mp_cmp(uint32_t *a, uint32_t *b, uint32_t size) {
+    // Compare from the most significant limb
+    for (int i = size - 1; i >= 0; i--) {
+        if (a[i] > b[i]) return 1;
+        if (a[i] < b[i]) return -1;
+    }
+    return 0;
+}
+
+void mod_mult(uint32_t *a, uint32_t *b, uint32_t *N, uint32_t *res, uint32_t size) {
+  // Initialize result to zero
+  uint32_t zero[size + 1];
+  for(int i = 0; i < size +1; i++){
+    zero[i] = 0;
+    res[i]  = 0;
+  }
+  uint32_t temp[size + 1];
+  
+  for (int i = 0; i < size * 32; i++) { 
+    // Determine the current bit of b
+    int bit_index = i / 32;
+    int bit_offset = i % 32;
+    uint32_t current_bit = (b[bit_index] >> bit_offset) & 1;
+    
+    if (current_bit) {
+      // If bit is 1, add a to the result
+      mod_add(res, a, N, temp, size);
+      for(int i = 0; i < size +1; i++){
+        res[i] = temp[i];
+      }
+    }
+      
+    // Double a (left shift by 1)
+    uint32_t carry[size + 1];
+    for(int i = 0; i < size +1; i++){
+      carry[i] = 0;
+    }
+    
+    // Left shift a
+    carry[0] = a[size - 1] >> 31; 
+    for (int j = size - 1; j > 0; j--) {
+      a[j] = (a[j] << 1) | (a[j-1] >> 31);
+    }
+    a[0] <<= 1;
+    
+    // Modular reduction of a
+    if (mp_cmp(a, N, size) >= 0) {
+      mod_add(a, zero, N, temp, size);
+      for(int i = 0; i < size +1; i++){
+        a[i] = temp[i];
+      }
+    }
+  }
+  res[size] = 0;
+}
+
+void mp_mult(uint32_t *a, uint32_t *b, uint32_t *res, uint32_t size) {
+  // Clear the result array to ensure clean initial state
+  for(int i = 0; i < 2*size +1; i++){
+    res[i] = 0;
+  }
+  
+  // Perform multiplication using grade-school algorithm
+  for (uint32_t i = 0; i < size; i++) {
+    uint64_t carry = 0;
+    for (uint32_t j = 0; j < size; j++) {
+      uint64_t product = (uint64_t)a[i] * (uint64_t)b[j];
+      uint64_t sum = (uint64_t)res[i + j] + product + carry;
+      res[i + j] = (uint32_t)sum;
+      carry = sum >> 32;
+    }
+    res[i + size] = carry;
+  }
+}
 
 void rsa_decryption_CRT(volatile uint32_t* HWreg, uint32_t* A, uint32_t* N, uint32_t* R_N, uint32_t* R2_N, uint32_t* d, uint32_t d_len, uint32_t* RES, 
-                        uint32_t* dP, uint32_t dP_len,  uint32_t* dQ, uint32_t dQ_len, uint32_t* qinv, uint32_t qinv_len){
+                        uint32_t* dP, uint32_t dP_len,  uint32_t* dQ, uint32_t dQ_len, uint32_t* qinv, uint32_t qinv_len, uint32_t* p, uint32_t*q){
   // R = 2^1024 so R_N and R2_N is the same
   // A holds the encrypted message
   load_data(HWreg, N, R2_N);
@@ -209,6 +314,11 @@ void rsa_decryption_CRT(volatile uint32_t* HWreg, uint32_t* A, uint32_t* N, uint
   // Subtraction
   mp_sub(M1,M2,M1,32);
   // Need to do the multiplication and sum mult later
+  alignas(128) uint32_t H[32] = {0};
+  alignas(128) uint32_t HQ[32] = {0};
+  mod_mult(qinv,M1,p,H,32);
+  mp_mult(H,q,HQ,32);
+  mp_add(M2,HQ,RES,32);
 }
 
 

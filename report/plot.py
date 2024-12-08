@@ -129,7 +129,7 @@ fig, axs = plt.subplots(1,2,figsize=(10, 4))
 ax1 = axs[0]
 ax2 = axs[1]
 
-ax1.set_title("Speed of the Montgomery Multiplier")
+ax1.set_title("Speed of the RSA algorithm for\nencrypting using a 16 bits exponent")
 ax1.plot(ite,Cycle_montgomery,"-o", label="# of Cycles Adder", color=color1)
 ax1.plot(ite,Cycle,"-s", label="# of Cycles Montgomery", color=color1)
 ax1.set_yscale("log")
@@ -146,9 +146,9 @@ ax1_twin.set_ylim(-1,1)
 ax1_twin.hlines(y=0,xmin=0,xmax=6, linestyles="--", alpha=0.5, color="grey")
 ax1.grid()
 
-ax2.set_title("Utilization of the Montgomery Multiplier")
-ax2.plot(ite, LUTS, "-^", label="# of Sliced LUTS", color=color2, alpha=0.7)
-ax2.plot(ite, REG,  "-s", label="# of Sliced Registers", color=color2, alpha=0.7)
+ax2.set_title("Utilization of the RSA algorithm for\nencrypting using a 16 bits exponent")
+ax2.plot(ite, LUTS, "-^", label="# of Sliced LUTS", color=color2, alpha=1)
+ax2.plot(ite, REG,  "-s", label="# of Sliced Registers", color=color2, alpha=1)
 ax2.set_ylim(0,25000)
 
 ax2.set_xlabel("Iteration of the Design")
